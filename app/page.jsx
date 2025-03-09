@@ -1,11 +1,17 @@
-"use client"
+"use client";
 
-import { useState, useId } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Button } from "@/components/ui/button"
+import { useState, useId } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import ReactMarkdown from "react-markdown";
+import { Badge } from "@/components/ui/badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -14,41 +20,40 @@ import {
   DialogTrigger,
   DialogFooter,
   DialogClose,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { PlusCircle } from "lucide-react"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PlusCircle } from "lucide-react";
 
-import { CardFooter } from "@/components/ui/card"
-import { Send } from "lucide-react"
-import { useEffect, useRef } from "react"
+import { CardFooter } from "@/components/ui/card";
+import { Send } from "lucide-react";
+import { useEffect, useRef } from "react";
 
-
-const BACKEND_ROUTE = 'http://localhost:8080/api/routes/'
-
+const BACKEND_ROUTE = "http://localhost:8080/api/routes/";
 
 export default function Home() {
-  
   // AGENTS STATE
-  const [expandedAgents, setExpandedAgents] = useState([])
-  const [agents, setAgents] = useState([])
+  const [expandedAgents, setExpandedAgents] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [newAgent, setNewAgent] = useState({
     name: "",
     address: "",
-  })
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const dialogId = useId()
+  });
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const dialogId = useId();
 
   const toggleAgent = (agentId) => {
-    setExpandedAgents((prev) => (prev.includes(agentId) ? prev.filter((id) => id !== agentId) : [...prev, agentId]))
-  }
+    setExpandedAgents((prev) =>
+      prev.includes(agentId)
+        ? prev.filter((id) => id !== agentId)
+        : [...prev, agentId]
+    );
+  };
 
   const fetchAgents = async () => {
-    const response = await fetch(BACKEND_ROUTE + 'list-agents',
-      {
-        method: 'POST'
-      }
-    );
+    const response = await fetch(BACKEND_ROUTE + "list-agents", {
+      method: "POST",
+    });
     const data = await response.json();
 
     const agents = data.map((agent) => ({
@@ -58,10 +63,10 @@ export default function Home() {
       address: agent.public_key,
       shapleyValue: null,
       contributions: [],
-      status: "active"
+      status: "active",
     }));
     setAgents(agents);
-  }
+  };
 
   useEffect(() => {
     fetchAgents();
@@ -76,22 +81,22 @@ export default function Home() {
         address: newAgent.address,
         shapleyValue: 0.1, // Fixed initial value
         status: "active",
-      }
-      setAgents([...agents, newAgentObj])
-      setNewAgent({ name: "", address: "" })
-      setIsDialogOpen(false)
+      };
+      setAgents([...agents, newAgentObj]);
+      setNewAgent({ name: "", address: "" });
+      setIsDialogOpen(false);
     }
-  }
+  };
 
   // CHAT STATE
   const [messages, setMessages] = useState([
-    { 
+    {
       id: 1,
       text: "Hi, I'm Artemis! 👋 I'm your Copilot for Flare, ready to help you with operations like generating wallets, sending tokens, and executing token swaps. \n\n⚠️ While I aim to be accurate, never risk funds you can't afford to lose.",
-      type: 'bot' 
-    }
+      type: "bot",
+    },
   ]);
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [pendingTransaction, setPendingTransaction] = useState(null);
@@ -99,7 +104,7 @@ export default function Home() {
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -108,38 +113,37 @@ export default function Home() {
 
   const handleSendMessage = async (text) => {
     try {
-      const response = await fetch(BACKEND_ROUTE + 'chat/', {
-        method: 'POST',
+      const response = await fetch(BACKEND_ROUTE + "chat/", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(
-          {
-            // system_message: "Give definitive answers, don't be vague or ambiguous. Even if you don't know the answer.",
-            message: text
-          }),
+        body: JSON.stringify({
+          // system_message: "Give definitive answers, don't be vague or ambiguous. Even if you don't know the answer.",
+          message: text,
+        }),
       });
-      
+
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        throw new Error("Network response was not ok");
       }
 
       const data = await response.json();
 
-      console.log("RESPONSES", data)
+      console.log("RESPONSES", data);
 
       // agents.forEach((agent) => {
       //   if (data.response_data[agent.id]) {
-      //     setMessages(prev => [...prev, { 
+      //     setMessages(prev => [...prev, {
       //       id: prev.length + 1,
       //       text: data.response_data[agent.id],
       //       type: 'bot'
       //     }]);
       //   }
       // });
-      
-      setAgents(prevAgents => 
-        prevAgents.map(agent => ({
+
+      setAgents((prevAgents) =>
+        prevAgents.map((agent) => ({
           ...agent,
 
           shapleyValue: data.shapley_values[agent.id],
@@ -148,30 +152,37 @@ export default function Home() {
             ...agent.contributions,
             {
               id: prevAgents.length + 1,
-              message: "ITERATION 0: " + data.response_data.iteration_0[agent.id],
-              timestamp: new Date().toISOString()
+              message:
+                "ITERATION 0: " + data.response_data.iteration_0[agent.id],
+              timestamp: new Date().toISOString(),
             },
             {
               id: prevAgents.length + 2,
-              message: "ITERATION 1: (based on consensus) " + data.response_data.iteration_1[agent.id],
-              timestamp: new Date().toISOString()
+              message:
+                "ITERATION 1: (based on consensus) " +
+                data.response_data.iteration_1[agent.id],
+              timestamp: new Date().toISOString(),
             },
             {
               id: prevAgents.length + 3,
-              message: "ITERATION 2: (based on consensus) " + data.response_data.iteration_2[agent.id],
-              timestamp: new Date().toISOString()
+              message:
+                "ITERATION 2: (based on consensus) " +
+                data.response_data.iteration_2[agent.id],
+              timestamp: new Date().toISOString(),
             },
             {
               id: prevAgents.length + 4,
-              message: "ITERATION 3: (based on consensus) " + data.response_data.iteration_3[agent.id],
-              timestamp: new Date().toISOString()
-            }
-          ]
+              message:
+                "ITERATION 3: (based on consensus) " +
+                data.response_data.iteration_3[agent.id],
+              timestamp: new Date().toISOString(),
+            },
+          ],
         }))
       );
-      
+
       // Check if response contains a transaction preview
-      if (data.response.includes('Transaction Preview:')) {
+      if (data.response.includes("Transaction Preview:")) {
         setAwaitingConfirmation(true);
         setPendingTransaction(text);
       }
@@ -179,11 +190,12 @@ export default function Home() {
       // if (data.shapley_values) {
       //   setShapleyValues(data.shapley_values);
       // }
-      
+
+      // TODO: data.response, data.response_data, data.shapley_values
       return data.response;
     } catch (error) {
-      console.error('Error:', error);
-      return 'Sorry, there was an error processing your request. Please try again.';
+      console.error("Error:", error);
+      return "Sorry, there was an error processing your request. Please try again.";
     }
   };
 
@@ -192,36 +204,46 @@ export default function Home() {
     if (!inputText.trim() || isLoading) return;
 
     const messageText = inputText.trim();
-    setInputText('');
+    setInputText("");
     setIsLoading(true);
-    setMessages(prev => [...prev, { id: prev.length + 1, text: messageText, type: 'user' }]);
+    setMessages((prev) => [
+      ...prev,
+      { id: prev.length + 1, text: messageText, type: "user" },
+    ]);
 
     // Handle transaction confirmation
     if (awaitingConfirmation) {
-      if (messageText.toUpperCase() === 'CONFIRM') {
+      if (messageText.toUpperCase() === "CONFIRM") {
         setAwaitingConfirmation(false);
         const response = await handleSendMessage(pendingTransaction);
-        setMessages(prev => [...prev, { text: response, type: 'bot' }]);
+        setMessages((prev) => [...prev, { text: response, type: "bot" }]);
       } else {
         setAwaitingConfirmation(false);
         setPendingTransaction(null);
-        setMessages(prev => [...prev, { 
-          text: 'Transaction cancelled. How else can I help you?', 
-          type: 'bot' 
-        }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: "Transaction cancelled. How else can I help you?",
+            type: "bot",
+          },
+        ]);
       }
     } else {
       const response = await handleSendMessage(messageText);
-      setMessages(prev => [...prev, { id: prev.length + 1, text: response, type: 'bot' }]);
+      setMessages((prev) => [
+        ...prev,
+        { id: prev.length + 1, text: response, type: "bot" },
+      ]);
     }
 
     setIsLoading(false);
   };
-  
-  
+
   return (
     <main className="container mx-auto p-4 min-h-screen flex flex-col">
-      <h1 className="text-3xl font-bold mb-6 text-center">Consensus Learning Agents</h1>
+      <h1 className="text-3xl font-bold mb-6 text-center">
+        Consensus Learning Agents
+      </h1>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow">
         <div className="lg:col-span-1">
           <Card className="h-[calc(100vh-150px)] overflow-y-auto">
@@ -240,24 +262,34 @@ export default function Home() {
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor={`name-${dialogId}`} className="text-right">
+                      <Label
+                        htmlFor={`name-${dialogId}`}
+                        className="text-right"
+                      >
                         Name
                       </Label>
                       <Input
                         id={`name-${dialogId}`}
                         value={newAgent.name}
-                        onChange={(e) => setNewAgent({ ...newAgent, name: e.target.value })}
+                        onChange={(e) =>
+                          setNewAgent({ ...newAgent, name: e.target.value })
+                        }
                         className="col-span-3"
                       />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor={`address-${dialogId}`} className="text-right">
+                      <Label
+                        htmlFor={`address-${dialogId}`}
+                        className="text-right"
+                      >
                         Address
                       </Label>
                       <Input
                         id={`address-${dialogId}`}
                         value={newAgent.address}
-                        onChange={(e) => setNewAgent({ ...newAgent, address: e.target.value })}
+                        onChange={(e) =>
+                          setNewAgent({ ...newAgent, address: e.target.value })
+                        }
                         className="col-span-3"
                       />
                     </div>
@@ -266,7 +298,10 @@ export default function Home() {
                     <DialogClose asChild>
                       <Button variant="outline">Cancel</Button>
                     </DialogClose>
-                    <Button className="bg-[#e61f57] hover:bg-[#e61f57]/90" onClick={handleAddAgent}>
+                    <Button
+                      className="bg-[#e61f57] hover:bg-[#e61f57]/90"
+                      onClick={handleAddAgent}
+                    >
                       Add Agent
                     </Button>
                   </DialogFooter>
@@ -274,44 +309,78 @@ export default function Home() {
               </Dialog>
             </CardHeader>
             <CardContent>
-              <Accordion type="multiple" value={expandedAgents} className="space-y-4">
+              <Accordion
+                type="multiple"
+                value={expandedAgents}
+                className="space-y-4"
+              >
                 {agents.map((agent) => (
-                  <AccordionItem key={agent.id} value={`agent-${agent.id}`} className="border rounded-lg overflow-hidden">
+                  <AccordionItem
+                    key={agent.id}
+                    value={`agent-${agent.id}`}
+                    className="border rounded-lg overflow-hidden"
+                  >
                     <div className="flex items-center p-3">
                       <Avatar className="mr-3">
                         <AvatarImage src={agent.icon} alt={agent.name} />
-                        <AvatarFallback>{agent.model_id.substring(0, 2)}</AvatarFallback>
+                        <AvatarFallback>
+                          {agent.model_id.substring(0, 2)}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <div className="font-medium">{agent.model_id}</div>
-                        <div className="text-sm text-muted-foreground truncate">{agent.address}</div>
+                        <div className="text-sm text-muted-foreground truncate">
+                          {agent.address}
+                        </div>
                       </div>
                       <div className="flex flex-col items-end mr-2">
                         <Badge
-                          variant={agent.status === "active" ? "default" : "secondary"}
-                          className={`mb-1 ${agent.status === "active" ? "bg-[#e61f57] hover:bg-[#e61f57]/90" : ""}`}
+                          variant={
+                            agent.status === "active" ? "default" : "secondary"
+                          }
+                          className={`mb-1 ${
+                            agent.status === "active"
+                              ? "bg-[#e61f57] hover:bg-[#e61f57]/90"
+                              : ""
+                          }`}
                         >
                           {agent.status}
                         </Badge>
-                        { agent.shapleyValue && (
+                        {agent.shapleyValue && (
                           <div className="text-xs font-medium">
-                            Shapley: <span className="text-[#e61f57]">{agent.shapleyValue.toFixed(4)}</span>
+                            Shapley:{" "}
+                            <span className="text-[#e61f57]">
+                              {agent.shapleyValue.toFixed(4)}
+                            </span>
                           </div>
                         )}
                       </div>
-                      <AccordionTrigger onClick={() => toggleAgent(`agent-${agent.id}`)} className="p-0 hover:no-underline">
+                      <AccordionTrigger
+                        onClick={() => toggleAgent(`agent-${agent.id}`)}
+                        className="p-0 hover:no-underline"
+                      >
                         <span className="sr-only">Toggle</span>
                       </AccordionTrigger>
                     </div>
                     <AccordionContent className="pt-0">
                       <div className="border-t p-3">
-                        <h4 className="text-sm font-semibold mb-2">Contributions</h4>
+                        <h4 className="text-sm font-semibold mb-2">
+                          Contributions
+                        </h4>
                         <div className="space-y-3">
                           {agent.contributions.length > 0 ? (
                             agent.contributions.map((contribution) => (
-                              <div key={contribution.id} className="bg-muted rounded-md p-2">
-                                <p className="text-sm mb-1">{contribution.message}</p>
-                                <time className="text-xs text-muted-foreground" dateTime={contribution.timestamp}>
+                              <div
+                                key={contribution.id}
+                                className="bg-muted rounded-md p-2"
+                              >
+                                <p className="text-sm mb-1">
+                                  {contribution.message}
+                                </p>
+                                <time
+                                  className="text-xs text-muted-foreground"
+                                  dateTime={contribution.timestamp}
+                                >
                                   {new Intl.DateTimeFormat("en-US", {
                                     year: "numeric",
                                     month: "short",
@@ -323,7 +392,9 @@ export default function Home() {
                               </div>
                             ))
                           ) : (
-                            <div className="text-sm text-muted-foreground">No contributions yet</div>
+                            <div className="text-sm text-muted-foreground">
+                              No contributions yet
+                            </div>
                           )}
                         </div>
                       </div>
@@ -347,23 +418,46 @@ export default function Home() {
                   </div>
                 ) : (
                   messages.map((message) => (
-                    <div key={message.id} className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}>
-                      <div className={`flex gap-3 max-w-[80%] ${message.type === "user" ? "flex-row-reverse" : ""}`}>
+                    <div
+                      key={message.id}
+                      className={`flex ${
+                        message.type === "user"
+                          ? "justify-end"
+                          : "justify-start"
+                      }`}
+                    >
+                      <div
+                        className={`flex gap-3 max-w-[80%] ${
+                          message.type === "user" ? "flex-row-reverse" : ""
+                        }`}
+                      >
                         <Avatar className="h-8 w-8">
                           {message.type === "user" ? (
                             <>
-                              <AvatarImage src="/placeholder.svg?height=32&width=32" alt="User" />
+                              <AvatarImage
+                                src="/placeholder.svg?height=32&width=32"
+                                alt="User"
+                              />
                               <AvatarFallback>U</AvatarFallback>
                             </>
                           ) : (
                             <>
-                              <AvatarImage src="/placeholder.svg?height=32&width=32" alt="System" />
+                              <AvatarImage
+                                src="/placeholder.svg?height=32&width=32"
+                                alt="System"
+                              />
                               <AvatarFallback>S</AvatarFallback>
                             </>
                           )}
                         </Avatar>
-                        <div className={`rounded-lg p-3 ${message.type === "user" ? "bg-[#e61f57] text-white" : "bg-muted"}`}>
-                          {message.text}
+                        <div
+                          className={`rounded-lg p-3 ${
+                            message.type === "user"
+                              ? "bg-[#e61f57] text-white"
+                              : "bg-muted"
+                          }`}
+                        >
+                          <ReactMarkdown>{message.text}</ReactMarkdown>
                         </div>
                       </div>
                     </div>
@@ -373,7 +467,10 @@ export default function Home() {
                   <div className="flex justify-start">
                     <div className="flex gap-3 max-w-[80%]">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src="/placeholder.svg?height=32&width=32" alt="System" />
+                        <AvatarImage
+                          src="/placeholder.svg?height=32&width=32"
+                          alt="System"
+                        />
                         <AvatarFallback>S</AvatarFallback>
                       </Avatar>
                       <div className="rounded-lg p-3 bg-muted">
@@ -396,7 +493,11 @@ export default function Home() {
                   onChange={(e) => setInputText(e.target.value)}
                   className="flex-1"
                 />
-                <Button type="submit" disabled={isLoading} className="bg-[#e61f57] hover:bg-[#e61f57]/90">
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="bg-[#e61f57] hover:bg-[#e61f57]/90"
+                >
                   <Send className="h-4 w-4" />
                 </Button>
               </form>
@@ -405,6 +506,5 @@ export default function Home() {
         </div>
       </div>
     </main>
-  )
+  );
 }
-
