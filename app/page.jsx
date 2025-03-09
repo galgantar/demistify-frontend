@@ -24,7 +24,7 @@ import { Send } from "lucide-react"
 import { useEffect, useRef } from "react"
 
 
-const BACKEND_ROUTE = 'http://localhost:80/api/routes/'
+const BACKEND_ROUTE = 'http://localhost:8080/api/routes/'
 
 
 export default function Home() {
@@ -115,8 +115,8 @@ export default function Home() {
         },
         body: JSON.stringify(
           {
-            system_message: "Give definitive answers, don't be vague or ambiguous. Even if you don't know the answer.",
-            user_message: text
+            // system_message: "Give definitive answers, don't be vague or ambiguous. Even if you don't know the answer.",
+            message: text
           }),
       });
       
