@@ -52,7 +52,7 @@ export default function Home() {
     const data = await response.json();
 
     const agents = data.map((agent) => ({
-      id: agent.model_id,
+      id: agent.id,
       model_id: agent.model_id,
       icon: "/placeholder.svg?height=40&width=40",
       address: agent.public_key,
@@ -108,7 +108,7 @@ export default function Home() {
 
   const handleSendMessage = async (text) => {
     try {
-      const response = await fetch(BACKEND_ROUTE + 'chat/', {
+      const response = await fetch(BACKEND_ROUTE + 'chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,48 +127,40 @@ export default function Home() {
       const data = await response.json();
 
       console.log("RESPONSES", data)
-
-      // agents.forEach((agent) => {
-      //   if (data.response_data[agent.id]) {
-      //     setMessages(prev => [...prev, { 
-      //       id: prev.length + 1,
-      //       text: data.response_data[agent.id],
-      //       type: 'bot'
-      //     }]);
-      //   }
-      // });
       
-      setAgents(prevAgents => 
-        prevAgents.map(agent => ({
-          ...agent,
+      if (data.response_data && data.shapley_values) {
+        setAgents(prevAgents => 
+          prevAgents.map(agent => ({
+            ...agent,
 
-          shapleyValue: data.shapley_values[agent.id],
+            shapleyValue: JSON.parse(data.shapley_values)[agent.model_id],
 
-          contributions: [
-            ...agent.contributions,
-            {
-              id: prevAgents.length + 1,
-              message: "ITERATION 0: " + data.response_data.iteration_0[agent.id],
-              timestamp: new Date().toISOString()
-            },
-            {
-              id: prevAgents.length + 2,
-              message: "ITERATION 1: (based on consensus) " + data.response_data.iteration_1[agent.id],
-              timestamp: new Date().toISOString()
-            },
-            {
-              id: prevAgents.length + 3,
-              message: "ITERATION 2: (based on consensus) " + data.response_data.iteration_2[agent.id],
-              timestamp: new Date().toISOString()
-            },
-            {
-              id: prevAgents.length + 4,
-              message: "ITERATION 3: (based on consensus) " + data.response_data.iteration_3[agent.id],
-              timestamp: new Date().toISOString()
-            }
-          ]
-        }))
-      );
+            contributions: [
+              ...agent.contributions,
+              {
+                id: prevAgents.length + 1,
+                message: "ITERATION 0: " + JSON.parse(data.response_data).iteration_0[agent.model_id],
+                timestamp: new Date().toISOString()
+              },
+              {
+                id: prevAgents.length + 2,
+                message: "ITERATION 1: (based on consensus) " + JSON.parse(data.response_data).iteration_1[agent.model_id],
+                timestamp: new Date().toISOString()
+              },
+              {
+                id: prevAgents.length + 3,
+                message: "ITERATION 2: (based on consensus) " + JSON.parse(data.response_data).iteration_2[agent.model_id],
+                timestamp: new Date().toISOString()
+              },
+              {
+                id: prevAgents.length + 4,
+                message: "ITERATION 3: (based on consensus) " + JSON.parse(data.response_data).iteration_3[agent.model_id],
+                timestamp: new Date().toISOString()
+              }
+            ]
+          }))
+        ); 
+      }
       
       // Check if response contains a transaction preview
       if (data.response.includes('Transaction Preview:')) {
