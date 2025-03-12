@@ -109,6 +109,15 @@ export default function Home() {
     scrollToBottom();
   }, [messages]);
 
+
+  const parseIfPossible = (text, key) => {
+    try {
+      return JSON.parse(text)[key]
+    } catch (error) {
+      return text
+    }
+  }
+
   const handleSendMessage = async (text) => {
     try {
       const response = await fetch(BACKEND_ROUTE + 'chat', {
@@ -143,17 +152,20 @@ export default function Home() {
               ...agent.contributions,
               {
                 id: prevAgents.length + 1,
-                message: "ITERATION 0: " + JSON.parse(data.response_data).iteration_0[agent.model_id],
+                iteration: 0,
+                message: parseIfPossible(JSON.parse(data.response_data).iteration_0[agent.model_id], "reason"),
                 timestamp: new Date().toISOString()
               },
               {
                 id: prevAgents.length + 2,
-                message: "ITERATION 1: (based on consensus) " + JSON.parse(data.response_data).iteration_1[agent.model_id],
+                iteration: 1,
+                message: parseIfPossible(JSON.parse(data.response_data).iteration_1[agent.model_id], "reason"),
                 timestamp: new Date().toISOString()
               },
               {
                 id: prevAgents.length + 3,
-                message: "ITERATION 2: (based on consensus) " + JSON.parse(data.response_data).iteration_2[agent.model_id],
+                iteration: 2,
+                message: parseIfPossible(JSON.parse(data.response_data).iteration_2[agent.model_id], "reason"),
                 timestamp: new Date().toISOString()
               },
               // {
@@ -338,8 +350,9 @@ export default function Home() {
                           {agent.contributions.length > 0 ? (
                             agent.contributions.map((contribution) => (
                               <div key={contribution.id} className="bg-muted rounded-md p-2">
-                                <p className="text-sm mb-1">{contribution.message}</p>
-                                <time className="text-xs text-muted-foreground" dateTime={contribution.timestamp}>
+                                <span className="text-xs text-muted-foreground mb-2">Iteration {contribution.iteration}</span>
+                                <p className="text-sm mb-1"> {contribution.message}</p>
+                                <time className="text-xs text-muted-foreground mb-2" dateTime={contribution.timestamp}>
                                   {new Intl.DateTimeFormat("en-US", {
                                     year: "numeric",
                                     month: "short",
