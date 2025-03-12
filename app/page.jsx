@@ -29,10 +29,13 @@ import { CardFooter } from "@/components/ui/card";
 import { Send } from "lucide-react";
 import { useEffect, useRef } from "react";
 
+import { ethers } from "ethers";
+import LoadingSpinner from "./components/LoadingSpinner";
+
 const BACKEND_ROUTE = "http://localhost:8080/api/routes/";
 
 const mainContractAbi = require("./MainContract.json").abi;
-const mainContractAddress = "0x7678210fd947958A19ccd55382E3a095851ECD33";
+const mainContractAddress = "0x66fBf1B71095d821610B3Ccd84586da92E785757";
 
 export default function Home() {
   // AGENTS STATE
@@ -106,6 +109,8 @@ export default function Home() {
   const [pendingTransaction, setPendingTransaction] = useState(null);
   // const [shapleyValues, setShapleyValues] = useState(null);
   const messagesEndRef = useRef(null);
+
+  const [signer, setSigner] = useState(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -283,16 +288,47 @@ export default function Home() {
     }
   };
 
+  const [isLoadingCreateAccount, setIsLoadingCreateAccount] = useState(false);
   const sendCreateAccountTransaction = async () => {
     if (awaitingCreateAccount) {
+      if (account === null) {
+        alert("Please connect your wallet first");
+        return;
+      }
+
+      setIsLoadingCreateAccount(true);
       setAwaitingCreateAccount(false);
       setNewAccountInfo({ amount: 0, address: "" });
 
-      // TODO:
+      console.log(
+        "SENDING CREATE ACCOUNT TRANSACTION: ",
+        newAccountInfo,
+        isLoadingCreateAccount
+      );
 
-      console.log("SENDING CREATE ACCOUNT TRANSACTION: ", newAccountInfo);
+      // Convert amount to wei (or the appropriate unit)
+      const amountInWei = ethers.utils.parseUnits(newAccountInfo.amount, 18); // Adjust 18 to your token's decimals
 
-      // const signer = await getSigner();
+      const Erc20Abi = [
+        "function allowance(address owner, address spender) external view returns (uint256)",
+        "function approve(address spender, uint256 amount) public returns (bool)",
+      ];
+      const wethAddress = "0xC67DCE33D7A8efA5FfEB961899C73fe01bCe9273";
+
+      const wethContract = new ethers.Contract(wethAddress, Erc20Abi, signer);
+
+      const allowance = await wethContract.allowance(
+        account,
+        mainContractAddress
+      );
+
+      console.log("ALLOWANCE: ", allowance);
+      if (allowance < amountInWei) {
+        let tx = await wethContract.approve(mainContractAddress, amountInWei);
+        let txRec = await tx.wait();
+
+        console.log("WETH TRANSACTION: ", txRec);
+      }
 
       // Create contract instance
       const contract = new ethers.Contract(
@@ -301,26 +337,48 @@ export default function Home() {
         signer
       );
 
-      // Convert amount to wei (or the appropriate unit)
-      const amountInWei = ethers.utils.parseUnits(newAccountInfo.amount, 18); // Adjust 18 to your token's decimals
-
       // Call the transfer function
       let transaction = await contract.registerWallet(amountInWei);
-      let txReceipt = await transaction.wait();
+      let txRec1 = await transaction.wait();
 
       console.log("TRANSACTION: ", txReceipt);
 
       const AttestationToken = require("./mockToken.json");
 
-      transaction = await contract.activateWallet(
-        AttestationToken.Header,
-        AttestationToken.Payload,
-        AttestationToken.Signature,
-        newAccountInfo.address
-      );
-      txReceipt = await transaction.wait();
+      console.log("ATTESATION TOKEN: ", AttestationToken);
 
-      console.log("TRANSACTION: ", txReceipt);
+      const header = ethers.utils.arrayify(AttestationToken.Header);
+      const payload = ethers.utils.arrayify(AttestationToken.Payload);
+      const signature = ethers.utils.arrayify(AttestationToken.Signature);
+
+      transaction = await contract.activateWallet(
+        header,
+        payload,
+        signature,
+        newAccountInfo.address,
+        {
+          gasLimit: 3000000,
+        }
+      );
+      let txRec2 = await transaction.wait();
+
+      txLink1 =
+        "https://coston2-explorer.flare.network/tx/" + txRec1.transactionHash;
+      txLink2 =
+        "https://coston2-explorer.flare.network/tx/" + txRec2.transactionHash;
+
+      const markdownString = `Account successfully created - [Register wallet transaction](${txLink1})  [Activate wallet transaction](${txLink2})`;
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: prev.length + 1,
+          text: markdownString,
+          type: "bot",
+        },
+      ]);
+
+      setIsLoadingCreateAccount(false);
     }
   };
 
@@ -349,7 +407,6 @@ export default function Home() {
     ),
   };
 
-
   const FLARE_NETWORK_PARAMS = {
     chainId: "0x72", // 14 in decimal (Coston2 Testnet)
     chainName: "Coston2",
@@ -374,8 +431,14 @@ export default function Home() {
     try {
       if (!window.ethereum) return setError("MetaMask not available");
 
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
       setAccount(accounts[0]);
+
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      setSigner(provider.getSigner());
+
       setError(null);
       switchToFlare();
     } catch (err) {
@@ -412,21 +475,30 @@ export default function Home() {
 
   return (
     <main className="container mx-auto p-4 min-h-screen flex flex-col">
-      <h1 className="text-3xl font-bold mb-6 text-center">Consensus Learning Agents</h1>
+      <h1 className="text-3xl font-bold mb-6 text-center">
+        Consensus Learning Agents
+      </h1>
       <div style={{ textAlign: "center", padding: "20px" }}>
-      <h2>Flare Network + MetaMask Integration</h2>
-      {account ? (
-        <>
-          <p><strong>Connected Address:</strong> {account}</p>
-          <p><strong>Balance:</strong> {balance ?? "Loading..."}</p>
-        </>
-      ) : (
-        <button onClick={connectWallet} style={{ padding: "10px 20px", fontSize: "16px" }}>
-          Connect MetaMask
-        </button>
-      )}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-    </div>
+        <h2>Flare Network + MetaMask Integration</h2>
+        {account ? (
+          <>
+            <p>
+              <strong>Connected Address:</strong> {account}
+            </p>
+            <p>
+              <strong>Balance:</strong> {balance ?? "Loading..."}
+            </p>
+          </>
+        ) : (
+          <button
+            onClick={connectWallet}
+            style={{ padding: "10px 20px", fontSize: "16px" }}
+          >
+            Connect MetaMask
+          </button>
+        )}
+        {error && <p style={{ color: "red" }}>{error}</p>}
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
         <div className="lg:col-span-5">
           <Card className="h-[calc(100vh-150px)] overflow-y-auto">
@@ -530,9 +602,12 @@ export default function Home() {
                         >
                           {agent.status}
                         </Badge>
-                        { agent.shapleyValue && (
+                        {agent.shapleyValue && (
                           <div className="text-md font-medium">
-                            Shapley: <span className="text-[#e61f57]">{agent.shapleyValue.toFixed(4)}</span>
+                            Shapley:{" "}
+                            <span className="text-[#e61f57]">
+                              {agent.shapleyValue.toFixed(4)}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -678,20 +753,26 @@ export default function Home() {
                           {message.text.includes("Account created with") &&
                             awaitingCreateAccount && (
                               <div>
-                                <>
-                                  <Button
-                                    variant="outline"
-                                    className="mt-2"
-                                    onClick={() => {
-                                      sendCreateAccountTransaction();
-                                    }}
-                                  >
-                                    ✅ Create and fund account
-                                  </Button>
-                                  <br />
-                                </>
+                                <Button
+                                  variant="outline"
+                                  className="mt-2"
+                                  onClick={() => {
+                                    sendCreateAccountTransaction();
+                                  }}
+                                >
+                                  ✅ Create and fund account
+                                </Button>
+                                <br />
                               </div>
                             )}
+                          {message.text.includes("Account created with") &&
+                            awaitingCreateAccount && (
+                              <>
+                                {isLoadingCreateAccount}
+                                {isLoadingCreateAccount && <LoadingSpinner />}
+                              </>
+                            )}
+
                           {/* ============ END CREATE ACCOUNT ============= */}
                         </div>
                       </div>
