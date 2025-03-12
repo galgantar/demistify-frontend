@@ -349,11 +349,84 @@ export default function Home() {
     ),
   };
 
+
+  const FLARE_NETWORK_PARAMS = {
+    chainId: "0x72", // 14 in decimal (Coston2 Testnet)
+    chainName: "Coston2",
+    rpcUrls: ["https://coston2-api.flare.network/ext/C/rpc"],
+    nativeCurrency: { name: "C2FLR", symbol: "C2FLR", decimals: 18 },
+    blockExplorerUrls: ["https://coston2-explorer.flare.network/"],
+  };
+
+  const [account, setAccount] = useState(null);
+  const [balance, setBalance] = useState(null);
+  const [error, setError] = useState(null);
+
+  // Check if MetaMask is installed
+  useEffect(() => {
+    if (!window.ethereum) {
+      setError("MetaMask not detected. Please install it.");
+    }
+  }, []);
+
+  // Request account access
+  const connectWallet = async () => {
+    try {
+      if (!window.ethereum) return setError("MetaMask not available");
+
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      setAccount(accounts[0]);
+      setError(null);
+      switchToFlare();
+    } catch (err) {
+      setError("Failed to connect wallet");
+    }
+  };
+
+  // Switch to Flare Network
+  const switchToFlare = async () => {
+    try {
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [FLARE_NETWORK_PARAMS],
+      });
+      fetchBalance();
+    } catch (err) {
+      setError("Failed to switch to Flare Network");
+    }
+  };
+
+  // Fetch balance
+  const fetchBalance = async () => {
+    if (!account || !window.ethereum) return;
+    try {
+      const balanceWei = await window.ethereum.request({
+        method: "eth_getBalance",
+        params: [account, "latest"],
+      });
+      setBalance((parseInt(balanceWei, 16) / 1e18).toFixed(4) + " C2FLR");
+    } catch (err) {
+      setError("Failed to fetch balance");
+    }
+  };
+
   return (
     <main className="container mx-auto p-4 min-h-screen flex flex-col">
-      <h1 className="text-3xl font-bold mb-6 text-center">
-        Consensus Learning Agents
-      </h1>
+      <h1 className="text-3xl font-bold mb-6 text-center">Consensus Learning Agents</h1>
+      <div style={{ textAlign: "center", padding: "20px" }}>
+      <h2>Flare Network + MetaMask Integration</h2>
+      {account ? (
+        <>
+          <p><strong>Connected Address:</strong> {account}</p>
+          <p><strong>Balance:</strong> {balance ?? "Loading..."}</p>
+        </>
+      ) : (
+        <button onClick={connectWallet} style={{ padding: "10px 20px", fontSize: "16px" }}>
+          Connect MetaMask
+        </button>
+      )}
+      {error && <p style={{ color: "red" }}>{error}</p>}
+    </div>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
         <div className="lg:col-span-5">
           <Card className="h-[calc(100vh-150px)] overflow-y-auto">
@@ -457,12 +530,9 @@ export default function Home() {
                         >
                           {agent.status}
                         </Badge>
-                        {agent.shapleyValue && (
-                          <div className="text-xs font-medium">
-                            Shapley:{" "}
-                            <span className="text-[#e61f57]">
-                              {agent.shapleyValue.toFixed(4)}
-                            </span>
+                        { agent.shapleyValue && (
+                          <div className="text-md font-medium">
+                            Shapley: <span className="text-[#e61f57]">{agent.shapleyValue.toFixed(4)}</span>
                           </div>
                         )}
                       </div>
@@ -572,7 +642,7 @@ export default function Home() {
                         >
                           <ReactMarkdown
                             components={MarkdownComponents}
-                            className="text-sm break-words whitespace-pre-wrap"
+                            className="text-md break-words whitespace-pre-wrap"
                           >
                             {message.text}
                           </ReactMarkdown>
