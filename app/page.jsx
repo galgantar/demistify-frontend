@@ -90,7 +90,8 @@ export default function Home() {
     { 
       id: 1,
       text: "Hi, I'm Artemis! 👋 I'm your Copilot for Flare, ready to help you with operations like generating wallets, sending tokens, and executing token swaps. \n\n⚠️ While I aim to be accurate, never risk funds you can't afford to lose.",
-      type: 'bot' 
+      type: 'bot',
+      timeElapsed: "0.0"
     }
   ]);
   const [inputText, setInputText] = useState('');
@@ -172,7 +173,7 @@ export default function Home() {
         setPendingTransaction(text);
       }
       
-      return data.response;
+      return data;
     } catch (error) {
       console.error('Error:', error);
       return 'Sorry, there was an error processing your request. Please try again.';
@@ -193,7 +194,7 @@ export default function Home() {
       if (messageText.toUpperCase() === 'CONFIRM') {
         setAwaitingConfirmation(false);
         const response = await handleSendMessage(pendingTransaction);
-        setMessages(prev => [...prev, { id: prev.length + 1, text: response, type: 'bot' }]);
+        setMessages(prev => [...prev, { id: prev.length + 1, text:response.response, type: 'bot' }]);
       } else {
         setAwaitingConfirmation(false);
         setPendingTransaction(null);
@@ -205,7 +206,7 @@ export default function Home() {
       }
     } else {
       const response = await handleSendMessage(messageText);
-      setMessages(prev => [...prev, { id: prev.length + 1, text: response, type: 'bot' }]);
+      setMessages(prev => [...prev, { id: prev.length + 1, text: response.response, type: 'bot', timeElapsed: response.time_elapsed, confidence: response.confidence_score }]);
     }
 
     setIsLoading(false);
@@ -215,7 +216,7 @@ export default function Home() {
     if (awaitingConfirmation) {
       setAwaitingConfirmation(false);
       const response = await handleSendMessage(pendingTransaction);
-      setMessages(prev => [...prev, { id: prev.length + 1, text: response, type: 'bot' }]);
+      setMessages(prev => [...prev, { id: prev.length + 1, text: response.response, type: 'bot', timeElapsed: response.time_elapsed, confidence: response.confidence_score }]);
     }
   }
   
@@ -247,8 +248,8 @@ export default function Home() {
   return (
     <main className="container mx-auto p-4 min-h-screen flex flex-col">
       <h1 className="text-3xl font-bold mb-6 text-center">Consensus Learning Agents</h1>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow">
-        <div className="lg:col-span-1">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
+        <div className="lg:col-span-5">
           <Card className="h-[calc(100vh-150px)] overflow-y-auto">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Contributing Agents</CardTitle>
@@ -361,7 +362,7 @@ export default function Home() {
             </CardContent>
           </Card>
         </div>
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-7">
           <Card className="h-[calc(100vh-150px)] flex flex-col">
             <CardHeader>
               <CardTitle>Consensus Learning Chat</CardTitle>
@@ -397,9 +398,19 @@ export default function Home() {
                             {message.text}
                           </ReactMarkdown>
                           { message.type === 'bot' && message.text.includes("Transaction Preview:") && (
-                            <Button variant="outline" className="mt-2" onClick={() => handleConfirmTransaction()} disabled={!awaitingConfirmation}>✅ Confirm transaction</Button>
+                            <>
+                              <Button variant="outline" className="mt-2" onClick={() => handleConfirmTransaction()} disabled={!awaitingConfirmation}>✅ Confirm transaction</Button>
+                              <br />
+                            </>
                           )}
                           {/* {message.text} */}
+                          { message.timeElapsed && (
+                            <span className="text-gray-500 inline">Time elapsed: {Number(message.timeElapsed).toFixed(2)}s </span>
+                          )}
+                          { message.confidence && (
+                            <span className="text-gray-500 inline">| Consensus confidence: {Number(message.confidence).toFixed(2)}</span>
+                          )}
+
                         </div>
                       </div>
                     </div>
