@@ -31,6 +31,9 @@ import { useEffect, useRef } from "react";
 
 const BACKEND_ROUTE = "http://localhost:8080/api/routes/";
 
+const mainContractAbi = require("./MainContract.json").abi;
+const mainContractAddress = "0x7678210fd947958A19ccd55382E3a095851ECD33";
+
 export default function Home() {
   // AGENTS STATE
   const [expandedAgents, setExpandedAgents] = useState([]);
@@ -63,7 +66,7 @@ export default function Home() {
       address: agent.public_key,
       shapleyValue: null,
       contributions: [],
-      status: "active",
+      status: "idle",
     }));
     setAgents(agents);
   };
@@ -94,6 +97,7 @@ export default function Home() {
       id: 1,
       text: "Hi, I'm Artemis! 👋 I'm your Copilot for Flare, ready to help you with operations like generating wallets, sending tokens, and executing token swaps. \n\n⚠️ While I aim to be accurate, never risk funds you can't afford to lose.",
       type: "bot",
+      timeElapsed: "0.0",
     },
   ]);
   const [inputText, setInputText] = useState("");
@@ -107,14 +111,28 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const [awaitingCreateAccount, setAwaitingCreateAccount] = useState(false);
+  const [newAccountInfo, setNewAccountInfo] = useState({
+    amount: 0,
+    address: "",
+  });
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
+  const parseIfPossible = (text, key) => {
+    try {
+      return JSON.parse(text)[key];
+    } catch (error) {
+      return text;
+    }
+  };
+
   const handleSendMessage = async (text) => {
     try {
-      const response = await fetch(BACKEND_ROUTE + 'chat', {
-        method: 'POST',
+      const response = await fetch(BACKEND_ROUTE + "chat", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
@@ -130,54 +148,68 @@ export default function Home() {
 
       const data = await response.json();
 
-      console.log("RESPONSES", data)
-      
-      if (data.response_data && data.shapley_values) {
-        setAgents(prevAgents => 
-          prevAgents.map(agent => ({
+      console.log("RESPONSES", data);
+
+      if (data.response_data) {
+        setAgents((prevAgents) =>
+          prevAgents.map((agent) => ({
             ...agent,
 
+            status: "active",
             shapleyValue: JSON.parse(data.shapley_values)[agent.model_id],
 
             contributions: [
               ...agent.contributions,
               {
                 id: prevAgents.length + 1,
-                message: "ITERATION 0: " + JSON.parse(data.response_data).iteration_0[agent.model_id],
-                timestamp: new Date().toISOString()
+                iteration: 0,
+                message: parseIfPossible(
+                  JSON.parse(data.response_data).iteration_0[agent.model_id],
+                  "reason"
+                ),
+                timestamp: new Date().toISOString(),
               },
               {
                 id: prevAgents.length + 2,
-                message: "ITERATION 1: (based on consensus) " + JSON.parse(data.response_data).iteration_1[agent.model_id],
-                timestamp: new Date().toISOString()
+                iteration: 1,
+                message: parseIfPossible(
+                  JSON.parse(data.response_data).iteration_1[agent.model_id],
+                  "reason"
+                ),
+                timestamp: new Date().toISOString(),
               },
               {
                 id: prevAgents.length + 3,
-                message: "ITERATION 2: (based on consensus) " + JSON.parse(data.response_data).iteration_2[agent.model_id],
-                timestamp: new Date().toISOString()
+                iteration: 2,
+                message: parseIfPossible(
+                  JSON.parse(data.response_data).iteration_2[agent.model_id],
+                  "reason"
+                ),
+                timestamp: new Date().toISOString(),
               },
-              {
-                id: prevAgents.length + 4,
-                message: "ITERATION 3: (based on consensus) " + JSON.parse(data.response_data).iteration_3[agent.model_id],
-                timestamp: new Date().toISOString()
-              }
-            ]
+              // {
+              //   id: prevAgents.length + 4,
+              //   message: "ITERATION 3: (based on consensus) " + JSON.parse(data.response_data).iteration_3[agent.model_id],
+              //   timestamp: new Date().toISOString()
+              // }
+            ],
           }))
-        ); 
+        );
       }
-      
+
+      if (data.response.includes("Account created with")) {
+        setAwaitingCreateAccount(true);
+        setNewAccountInfo({ amount: data.amount, address: data.address });
+      }
+
       // Check if response contains a transaction preview
+
       if (data.response.includes("Transaction Preview:")) {
         setAwaitingConfirmation(true);
         setPendingTransaction(text);
       }
 
-      // if (data.shapley_values) {
-      //   setShapleyValues(data.shapley_values);
-      // }
-
-      // TODO: data.response, data.response_data, data.shapley_values
-      return data.response;
+      return data;
     } catch (error) {
       console.error("Error:", error);
       return "Sorry, there was an error processing your request. Please try again.";
@@ -201,13 +233,17 @@ export default function Home() {
       if (messageText.toUpperCase() === "CONFIRM") {
         setAwaitingConfirmation(false);
         const response = await handleSendMessage(pendingTransaction);
-        setMessages((prev) => [...prev, { text: response, type: "bot" }]);
+        setMessages((prev) => [
+          ...prev,
+          { id: prev.length + 1, text: response.response, type: "bot" },
+        ]);
       } else {
         setAwaitingConfirmation(false);
         setPendingTransaction(null);
         setMessages((prev) => [
           ...prev,
           {
+            id: prev.length + 1,
             text: "Transaction cancelled. How else can I help you?",
             type: "bot",
           },
@@ -217,11 +253,100 @@ export default function Home() {
       const response = await handleSendMessage(messageText);
       setMessages((prev) => [
         ...prev,
-        { id: prev.length + 1, text: response, type: "bot" },
+        {
+          id: prev.length + 1,
+          text: response.response,
+          type: "bot",
+          timeElapsed: response.time_elapsed,
+          confidence: response.confidence_score,
+        },
       ]);
     }
 
     setIsLoading(false);
+  };
+
+  const handleConfirmTransaction = async () => {
+    if (awaitingConfirmation) {
+      setAwaitingConfirmation(false);
+      const response = await handleSendMessage(pendingTransaction);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: prev.length + 1,
+          text: response.response,
+          type: "bot",
+          timeElapsed: response.time_elapsed,
+          confidence: response.confidence_score,
+        },
+      ]);
+    }
+  };
+
+  const sendCreateAccountTransaction = async () => {
+    if (awaitingCreateAccount) {
+      setAwaitingCreateAccount(false);
+      setNewAccountInfo({ amount: 0, address: "" });
+
+      // TODO:
+
+      console.log("SENDING CREATE ACCOUNT TRANSACTION: ", newAccountInfo);
+
+      // const signer = await getSigner();
+
+      // Create contract instance
+      const contract = new ethers.Contract(
+        mainContractAddress,
+        mainContractAbi,
+        signer
+      );
+
+      // Convert amount to wei (or the appropriate unit)
+      const amountInWei = ethers.utils.parseUnits(newAccountInfo.amount, 18); // Adjust 18 to your token's decimals
+
+      // Call the transfer function
+      let transaction = await contract.registerWallet(amountInWei);
+      let txReceipt = await transaction.wait();
+
+      console.log("TRANSACTION: ", txReceipt);
+
+      const AttestationToken = require("./mockToken.json");
+
+      transaction = await contract.activateWallet(
+        AttestationToken.Header,
+        AttestationToken.Payload,
+        AttestationToken.Signature,
+        newAccountInfo.address
+      );
+      txReceipt = await transaction.wait();
+
+      console.log("TRANSACTION: ", txReceipt);
+    }
+  };
+
+  // Custom components for ReactMarkdown
+  const MarkdownComponents = {
+    // Override paragraph to remove default margins
+    p: ({ children }) => <span className="inline">{children}</span>,
+    // Style code blocks
+    code: ({ node, inline, className, children, ...props }) =>
+      inline ? (
+        <code className="bg-gray-200 rounded px-1 py-0.5 text-sm">
+          {children}
+        </code>
+      ) : (
+        <pre className="bg-gray-200 rounded p-2 my-2 overflow-x-auto">
+          <code {...props} className="text-sm">
+            {children}
+          </code>
+        </pre>
+      ),
+    // Style links
+    a: ({ node, children, ...props }) => (
+      <a {...props} className="text-pink-600 hover:underline" target="_blank">
+        {children}
+      </a>
+    ),
   };
 
   return (
@@ -229,8 +354,8 @@ export default function Home() {
       <h1 className="text-3xl font-bold mb-6 text-center">
         Consensus Learning Agents
       </h1>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow">
-        <div className="lg:col-span-1">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
+        <div className="lg:col-span-5">
           <Card className="h-[calc(100vh-150px)] overflow-y-auto">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Contributing Agents</CardTitle>
@@ -307,15 +432,16 @@ export default function Home() {
                   >
                     <div className="flex items-center p-3">
                       <Avatar className="mr-3">
-                        <AvatarImage src={agent.icon} alt={agent.name} />
+                        {/* <AvatarImage src={agent.icon} alt={agent.name} /> */}
                         <AvatarFallback>
-                          {agent.model_id.substring(0, 2)}
+                          <b>{agent.model_id.substring(0, 2)}</b>
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <div className="font-medium">{agent.model_id}</div>
                         <div className="text-sm text-muted-foreground truncate">
-                          {agent.address}
+                          {agent.address.slice(0, 7)}...
+                          {agent.address.slice(-7)}
                         </div>
                       </div>
                       <div className="flex flex-col items-end mr-2">
@@ -359,11 +485,15 @@ export default function Home() {
                                 key={contribution.id}
                                 className="bg-muted rounded-md p-2"
                               >
+                                <span className="text-xs text-muted-foreground mb-2">
+                                  Iteration {contribution.iteration}
+                                </span>
                                 <p className="text-sm mb-1">
+                                  {" "}
                                   {contribution.message}
                                 </p>
                                 <time
-                                  className="text-xs text-muted-foreground"
+                                  className="text-xs text-muted-foreground mb-2"
                                   dateTime={contribution.timestamp}
                                 >
                                   {new Intl.DateTimeFormat("en-US", {
@@ -390,7 +520,7 @@ export default function Home() {
             </CardContent>
           </Card>
         </div>
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-7">
           <Card className="h-[calc(100vh-150px)] flex flex-col">
             <CardHeader>
               <CardTitle>Consensus Learning Chat</CardTitle>
@@ -419,19 +549,17 @@ export default function Home() {
                         <Avatar className="h-8 w-8">
                           {message.type === "user" ? (
                             <>
-                              <AvatarImage
-                                src="/placeholder.svg?height=32&width=32"
-                                alt="User"
-                              />
-                              <AvatarFallback>U</AvatarFallback>
+                              {/* <AvatarImage src="/placeholder.svg?height=32&width=32" alt="User" /> */}
+                              <AvatarFallback>
+                                <b>U</b>
+                              </AvatarFallback>
                             </>
                           ) : (
                             <>
-                              <AvatarImage
-                                src="/placeholder.svg?height=32&width=32"
-                                alt="System"
-                              />
-                              <AvatarFallback>S</AvatarFallback>
+                              {/* <AvatarImage src="/placeholder.svg?height=32&width=32" alt="System" /> */}
+                              <AvatarFallback>
+                                <b>S</b>
+                              </AvatarFallback>
                             </>
                           )}
                         </Avatar>
@@ -442,7 +570,59 @@ export default function Home() {
                               : "bg-muted"
                           }`}
                         >
-                          <ReactMarkdown>{message.text}</ReactMarkdown>
+                          <ReactMarkdown
+                            components={MarkdownComponents}
+                            className="text-sm break-words whitespace-pre-wrap"
+                          >
+                            {message.text}
+                          </ReactMarkdown>
+                          {/* ============ CONFIRM TRANSACTION ============= */}
+                          {message.type === "bot" &&
+                            message.text.includes("Transaction Preview:") && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  className="mt-2"
+                                  onClick={() => handleConfirmTransaction()}
+                                  disabled={!awaitingConfirmation}
+                                >
+                                  ✅ Confirm transaction
+                                </Button>
+                                <br />
+                              </>
+                            )}
+                          {/* {message.text} */}
+                          {message.timeElapsed && (
+                            <span className="text-gray-500 inline">
+                              Time elapsed:{" "}
+                              {Number(message.timeElapsed).toFixed(2)}s{" "}
+                            </span>
+                          )}
+                          {message.confidence && (
+                            <span className="text-gray-500 inline">
+                              | Consensus confidence:{" "}
+                              {Number(message.confidence).toFixed(2)}
+                            </span>
+                          )}
+                          {/* ============ CREATE ACCOUNT ============= */}
+                          {message.text.includes("Account created with") &&
+                            awaitingCreateAccount && (
+                              <div>
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    className="mt-2"
+                                    onClick={() => {
+                                      sendCreateAccountTransaction();
+                                    }}
+                                  >
+                                    ✅ Create and fund account
+                                  </Button>
+                                  <br />
+                                </>
+                              </div>
+                            )}
+                          {/* ============ END CREATE ACCOUNT ============= */}
                         </div>
                       </div>
                     </div>
@@ -452,11 +632,10 @@ export default function Home() {
                   <div className="flex justify-start">
                     <div className="flex gap-3 max-w-[80%]">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage
-                          src="/placeholder.svg?height=32&width=32"
-                          alt="System"
-                        />
-                        <AvatarFallback>S</AvatarFallback>
+                        {/* <AvatarImage src="/placeholder.svg?height=32&width=32" alt="System" /> */}
+                        <AvatarFallback>
+                          <b>S</b>
+                        </AvatarFallback>
                       </Avatar>
                       <div className="rounded-lg p-3 bg-muted">
                         <div className="flex space-x-2">
