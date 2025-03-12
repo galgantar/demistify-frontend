@@ -22,6 +22,8 @@ import { PlusCircle } from "lucide-react"
 import { CardFooter } from "@/components/ui/card"
 import { Send } from "lucide-react"
 import { useEffect, useRef } from "react"
+import ReactMarkdown from "react-markdown";
+
 
 
 const BACKEND_ROUTE = 'http://localhost:8080/api/routes/'
@@ -58,7 +60,7 @@ export default function Home() {
       address: agent.public_key,
       shapleyValue: null,
       contributions: [],
-      status: "active"
+      status: "idle"
     }));
     setAgents(agents);
   }
@@ -128,11 +130,12 @@ export default function Home() {
 
       console.log("RESPONSES", data)
       
-      if (data.response_data && data.shapley_values) {
+      if (data.response_data) {
         setAgents(prevAgents => 
           prevAgents.map(agent => ({
             ...agent,
-
+            
+            status: "active",
             shapleyValue: JSON.parse(data.shapley_values)[agent.model_id],
 
             contributions: [
@@ -152,25 +155,22 @@ export default function Home() {
                 message: "ITERATION 2: (based on consensus) " + JSON.parse(data.response_data).iteration_2[agent.model_id],
                 timestamp: new Date().toISOString()
               },
-              {
-                id: prevAgents.length + 4,
-                message: "ITERATION 3: (based on consensus) " + JSON.parse(data.response_data).iteration_3[agent.model_id],
-                timestamp: new Date().toISOString()
-              }
+              // {
+              //   id: prevAgents.length + 4,
+              //   message: "ITERATION 3: (based on consensus) " + JSON.parse(data.response_data).iteration_3[agent.model_id],
+              //   timestamp: new Date().toISOString()
+              // }
             ]
           }))
         ); 
       }
       
       // Check if response contains a transaction preview
-      if (data.response.includes('Transaction Preview:')) {
+      
+      if (data.response.includes("Transaction Preview:")) {
         setAwaitingConfirmation(true);
         setPendingTransaction(text);
       }
-
-      // if (data.shapley_values) {
-      //   setShapleyValues(data.shapley_values);
-      // }
       
       return data.response;
     } catch (error) {
@@ -193,13 +193,14 @@ export default function Home() {
       if (messageText.toUpperCase() === 'CONFIRM') {
         setAwaitingConfirmation(false);
         const response = await handleSendMessage(pendingTransaction);
-        setMessages(prev => [...prev, { text: response, type: 'bot' }]);
+        setMessages(prev => [...prev, { id: prev.length + 1, text: response, type: 'bot' }]);
       } else {
         setAwaitingConfirmation(false);
         setPendingTransaction(null);
-        setMessages(prev => [...prev, { 
+        setMessages(prev => [...prev, {
+          id: prev.length + 1,
           text: 'Transaction cancelled. How else can I help you?', 
-          type: 'bot' 
+          type: 'bot'
         }]);
       }
     } else {
@@ -209,8 +210,40 @@ export default function Home() {
 
     setIsLoading(false);
   };
+
+  const handleConfirmTransaction = async () => {
+    if (awaitingConfirmation) {
+      setAwaitingConfirmation(false);
+      const response = await handleSendMessage(pendingTransaction);
+      setMessages(prev => [...prev, { id: prev.length + 1, text: response, type: 'bot' }]);
+    }
+  }
   
-  
+  // Custom components for ReactMarkdown
+  const MarkdownComponents = {
+    // Override paragraph to remove default margins
+    p: ({ children }) => <span className="inline">{children}</span>,
+    // Style code blocks
+    code: ({ node, inline, className, children, ...props }) =>
+      inline ? (
+        <code className="bg-gray-200 rounded px-1 py-0.5 text-sm">
+          {children}
+        </code>
+      ) : (
+        <pre className="bg-gray-200 rounded p-2 my-2 overflow-x-auto">
+          <code {...props} className="text-sm">
+            {children}
+          </code>
+        </pre>
+      ),
+    // Style links
+    a: ({ node, children, ...props }) => (
+      <a {...props} className="text-pink-600 hover:underline" target="_blank">
+        {children}
+      </a>
+    ),
+  };
+
   return (
     <main className="container mx-auto p-4 min-h-screen flex flex-col">
       <h1 className="text-3xl font-bold mb-6 text-center">Consensus Learning Agents</h1>
@@ -271,12 +304,14 @@ export default function Home() {
                   <AccordionItem key={agent.id} value={`agent-${agent.id}`} className="border rounded-lg overflow-hidden">
                     <div className="flex items-center p-3">
                       <Avatar className="mr-3">
-                        <AvatarImage src={agent.icon} alt={agent.name} />
-                        <AvatarFallback>{agent.model_id.substring(0, 2)}</AvatarFallback>
+                        {/* <AvatarImage src={agent.icon} alt={agent.name} /> */}
+                        <AvatarFallback><b>{agent.model_id.substring(0, 2)}</b></AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <div className="font-medium">{agent.model_id}</div>
-                        <div className="text-sm text-muted-foreground truncate">{agent.address}</div>
+                        <div className="text-sm text-muted-foreground truncate">
+                          {agent.address.slice(0,7)}...{agent.address.slice(-7)}
+                        </div>
                       </div>
                       <div className="flex flex-col items-end mr-2">
                         <Badge
@@ -344,18 +379,27 @@ export default function Home() {
                         <Avatar className="h-8 w-8">
                           {message.type === "user" ? (
                             <>
-                              <AvatarImage src="/placeholder.svg?height=32&width=32" alt="User" />
-                              <AvatarFallback>U</AvatarFallback>
+                              {/* <AvatarImage src="/placeholder.svg?height=32&width=32" alt="User" /> */}
+                              <AvatarFallback><b>U</b></AvatarFallback>
                             </>
                           ) : (
                             <>
-                              <AvatarImage src="/placeholder.svg?height=32&width=32" alt="System" />
-                              <AvatarFallback>S</AvatarFallback>
+                              {/* <AvatarImage src="/placeholder.svg?height=32&width=32" alt="System" /> */}
+                              <AvatarFallback><b>S</b></AvatarFallback>
                             </>
                           )}
                         </Avatar>
                         <div className={`rounded-lg p-3 ${message.type === "user" ? "bg-[#e61f57] text-white" : "bg-muted"}`}>
-                          {message.text}
+                          <ReactMarkdown
+                            components={MarkdownComponents}
+                            className="text-sm break-words whitespace-pre-wrap"
+                          >
+                            {message.text}
+                          </ReactMarkdown>
+                          { message.type === 'bot' && message.text.includes("Transaction Preview:") && (
+                            <Button variant="outline" className="mt-2" onClick={() => handleConfirmTransaction()} disabled={!awaitingConfirmation}>✅ Confirm transaction</Button>
+                          )}
+                          {/* {message.text} */}
                         </div>
                       </div>
                     </div>
@@ -365,8 +409,8 @@ export default function Home() {
                   <div className="flex justify-start">
                     <div className="flex gap-3 max-w-[80%]">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src="/placeholder.svg?height=32&width=32" alt="System" />
-                        <AvatarFallback>S</AvatarFallback>
+                        {/* <AvatarImage src="/placeholder.svg?height=32&width=32" alt="System" /> */}
+                        <AvatarFallback><b>S</b></AvatarFallback>
                       </Avatar>
                       <div className="rounded-lg p-3 bg-muted">
                         <div className="flex space-x-2">
