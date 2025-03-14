@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import '@mantine/core/styles.css';
+import "@mantine/core/styles.css";
 import { useState, useId } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,32 +25,33 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle } from "lucide-react";
 
-import { CardFooter } from "@/components/ui/card"
-import { Send } from "lucide-react"
-import { useEffect, useRef } from "react"
+import { CardFooter } from "@/components/ui/card";
+import { Send } from "lucide-react";
+import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { Progress } from '@mantine/core';
-import { Accordion as MantineAccordion } from '@mantine/core';
+import { Progress } from "@mantine/core";
+import { Accordion as MantineAccordion } from "@mantine/core";
 
 import { ethers } from "ethers";
 import LoadingSpinner from "./components/LoadingSpinner";
 
-import { createTheme, MantineProvider } from '@mantine/core';
+import { createTheme, MantineProvider } from "@mantine/core";
 
 const theme = createTheme({
   /** Put your mantine theme override here */
 });
 
-const BACKEND_ROUTE = "http://localhost:8080/api/routes/";
+const BACKEND_ROUTE = "http://localhost:80/api/routes/";
+// const BACKEND_ROUTE = "http://34.70.53.63:80/api/routes/";
 
 const mainContractAbi = require("./MainContract.json").abi;
-const mainContractAddress = "0x66fBf1B71095d821610B3Ccd84586da92E785757";
+const mainContractAddress = "0xe4438A002095Ffa8FC46C3fFfA1Aadcea1b04542";
 
 export default function Home() {
   // AGENTS STATE
-  const [expandedAgents, setExpandedAgents] = useState([])
-  const [expandedContributions, setExpandedContributions] = useState([])
-  const [agents, setAgents] = useState([])
+  const [expandedAgents, setExpandedAgents] = useState([]);
+  const [expandedContributions, setExpandedContributions] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [newAgent, setNewAgent] = useState({
     name: "",
     address: "",
@@ -130,6 +131,9 @@ export default function Home() {
   const [newAccountInfo, setNewAccountInfo] = useState({
     amount: 0,
     address: "",
+    header: "",
+    payload: "",
+    signature: "",
   });
 
   useEffect(() => {
@@ -189,8 +193,11 @@ export default function Home() {
                 type: "aggregated",
                 id: prevAgents.length + 2,
                 iteration: 1,
-                message: parseIfPossible(JSON.parse(data.response_data).iteration_1[agent.model_id], "reason"),
-                timestamp: new Date().toISOString()
+                message: parseIfPossible(
+                  JSON.parse(data.response_data).iteration_1[agent.model_id],
+                  "reason"
+                ),
+                timestamp: new Date().toISOString(),
               },
               {
                 type: "iteration",
@@ -206,8 +213,11 @@ export default function Home() {
                 type: "aggregated",
                 id: prevAgents.length + 4,
                 iteration: -1,
-                message: parseIfPossible(JSON.parse(data.response_data).aggregate_1, "reason"),
-                timestamp: new Date().toISOString()
+                message: parseIfPossible(
+                  JSON.parse(data.response_data).aggregate_1,
+                  "reason"
+                ),
+                timestamp: new Date().toISOString(),
               },
 
               // {
@@ -236,7 +246,13 @@ export default function Home() {
 
       if (data.response.includes("Account created with")) {
         setAwaitingCreateAccount(true);
-        setNewAccountInfo({ amount: data.amount, address: data.address });
+        setNewAccountInfo({
+          amount: data.amount,
+          address: data.address,
+          header: data.header,
+          payload: data.payload,
+          signature: data.signature,
+        });
       }
 
       // Check if response contains a transaction preview
@@ -329,7 +345,6 @@ export default function Home() {
       }
 
       setIsLoadingCreateAccount(true);
-      setNewAccountInfo({ amount: 0, address: "" });
 
       console.log(
         "SENDING CREATE ACCOUNT TRANSACTION: ",
@@ -376,9 +391,13 @@ export default function Home() {
 
       const AttestationToken = require("./mockToken.json");
 
-      const header = ethers.utils.arrayify(AttestationToken.Header);
-      const payload = ethers.utils.arrayify(AttestationToken.Payload);
-      const signature = ethers.utils.arrayify(AttestationToken.Signature);
+      const header = ethers.utils.arrayify(newAccountInfo.header);
+      const payload = ethers.utils.arrayify(newAccountInfo.payload);
+      const signature = ethers.utils.arrayify(newAccountInfo.signature);
+
+      console.log("HEADER: ", header);
+      console.log("PAYLOAD: ", payload);
+      console.log("SIGNATURE: ", signature);
 
       transaction = await contract.activateWallet(
         header,
@@ -407,6 +426,13 @@ export default function Home() {
         },
       ]);
 
+      setNewAccountInfo({
+        amount: 0,
+        address: "",
+        header: "",
+        payload: "",
+        signature: "",
+      });
       setAwaitingCreateAccount(false);
       setIsLoadingCreateAccount(false);
     }
@@ -505,378 +531,432 @@ export default function Home() {
 
   return (
     <MantineProvider theme={theme}>
-    <main className="container mx-auto p-4 min-h-screen flex flex-col">
-      <h1 className="text-3xl font-bold mb-6 text-center">
-        Consensus Learning Agents
-      </h1>
-      <div style={{ textAlign: "center", padding: "20px" }}>
-        <h2>Flare Network + MetaMask Integration</h2>
-        {account ? (
-          <>
-            <p>
-              <strong>Connected Address:</strong> {account}
-            </p>
-            <p>
-              <strong>Balance:</strong> {balance ?? "Loading..."}
-            </p>
-          </>
-        ) : (
-          <button
-            onClick={connectWallet}
-            style={{ padding: "10px 20px", fontSize: "16px" }}
-          >
-            Connect MetaMask
-          </button>
-        )}
-        {error && <p style={{ color: "red" }}>{error}</p>}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
-        <div className="lg:col-span-5">
-          <Card className="h-[calc(100vh-150px)] overflow-y-auto">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Contributing Agents</CardTitle>
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-[#e61f57] hover:bg-[#e61f57]/90">
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Add Model
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Model</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label
-                        htmlFor={`name-${dialogId}`}
-                        className="text-right"
-                      >
-                        Name
-                      </Label>
-                      <Input
-                        id={`name-${dialogId}`}
-                        value={newAgent.name}
-                        onChange={(e) =>
-                          setNewAgent({ ...newAgent, name: e.target.value })
-                        }
-                        className="col-span-3"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label
-                        htmlFor={`address-${dialogId}`}
-                        className="text-right"
-                      >
-                        Address
-                      </Label>
-                      <Input
-                        id={`address-${dialogId}`}
-                        value={newAgent.address}
-                        onChange={(e) =>
-                          setNewAgent({ ...newAgent, address: e.target.value })
-                        }
-                        className="col-span-3"
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button
-                      className="bg-[#e61f57] hover:bg-[#e61f57]/90"
-                      onClick={handleAddAgent}
-                    >
-                      Add Agent
+      <main className="container mx-auto p-4 min-h-screen flex flex-col">
+        <h1 className="text-3xl font-bold mb-6 text-center">
+          Consensus Learning Agents
+        </h1>
+        <div style={{ textAlign: "center", padding: "20px" }}>
+          <h2>Flare Network + MetaMask Integration</h2>
+          {account ? (
+            <>
+              <p>
+                <strong>Connected Address:</strong> {account}
+              </p>
+              <p>
+                <strong>Balance:</strong> {balance ?? "Loading..."}
+              </p>
+            </>
+          ) : (
+            <button
+              onClick={connectWallet}
+              style={{ padding: "10px 20px", fontSize: "16px" }}
+            >
+              Connect MetaMask
+            </button>
+          )}
+          {error && <p style={{ color: "red" }}>{error}</p>}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
+          <div className="lg:col-span-5">
+            <Card className="h-[calc(100vh-150px)] overflow-y-auto">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Contributing Agents</CardTitle>
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-[#e61f57] hover:bg-[#e61f57]/90">
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Add Model
                     </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </CardHeader>
-            <CardContent>
-              <Accordion
-                type="multiple"
-                value={expandedAgents}
-                className="space-y-4"
-              >
-                {agents.map((agent) => (
-                  <AccordionItem
-                    key={agent.id}
-                    value={`agent-${agent.id}`}
-                    className="border rounded-lg overflow-hidden"
-                  >
-                    <div className="flex items-center p-3">
-                      <Avatar className="mr-3">
-                        {/* <AvatarImage src={agent.icon} alt={agent.name} /> */}
-                        <AvatarFallback>
-                          <b>{agent.model_id.substring(0, 2)}</b>
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="font-medium">{agent.model_id}</div>
-                        <div className="text-sm text-muted-foreground truncate">
-                          {agent.address.slice(0, 7)}...
-                          {agent.address.slice(-7)}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end mr-2">
-                        <Badge
-                          variant={
-                            agent.status === "active" ? "default" : "secondary"
-                          }
-                          className={`mb-1 ${
-                            agent.status === "active"
-                              ? "bg-[#e61f57] hover:bg-[#e61f57]/90"
-                              : ""
-                          }`}
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Model</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label
+                          htmlFor={`name-${dialogId}`}
+                          className="text-right"
                         >
-                          {agent.status}
-                        </Badge>
-                        {agent.shapleyValue && (
-                          <div className="text-md font-medium">
-                            Shapley:{" "}
-                            <span className="text-[#e61f57]">
-                              {agent.shapleyValue.toFixed(4)}
-                            </span>
-                          </div>
-                        )}
+                          Name
+                        </Label>
+                        <Input
+                          id={`name-${dialogId}`}
+                          value={newAgent.name}
+                          onChange={(e) =>
+                            setNewAgent({ ...newAgent, name: e.target.value })
+                          }
+                          className="col-span-3"
+                        />
                       </div>
-                      <AccordionTrigger
-                        onClick={() => toggleAgent(`agent-${agent.id}`)}
-                        className="p-0 hover:no-underline"
-                      >
-                        <span className="sr-only">Toggle</span>
-                      </AccordionTrigger>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label
+                          htmlFor={`address-${dialogId}`}
+                          className="text-right"
+                        >
+                          Address
+                        </Label>
+                        <Input
+                          id={`address-${dialogId}`}
+                          value={newAgent.address}
+                          onChange={(e) =>
+                            setNewAgent({
+                              ...newAgent,
+                              address: e.target.value,
+                            })
+                          }
+                          className="col-span-3"
+                        />
+                      </div>
                     </div>
-                    <AccordionContent className="pt-0">
-                      <div className="border-t p-3">
-                        <h4 className="text-sm font-semibold mb-2">
-                          Contributions
-                        </h4>
-                        <div className="space-y-3">
-                          {agent.contributions.length > 0 ? (
-                            agent.contributions.map((contribution) => (
-                              
-                              contribution.type === "iteration" ? 
-                              <div key={contribution.id} className="bg-muted rounded-md p-2">
-                                <span className="text-md text-muted-foreground mb-2 font-semibold">Iteration {contribution.iteration}</span>
-                                <p className="text-sm mb-1 mt-1"> {contribution.message}</p>
-                                <time className="text-xs text-muted-foreground mb-2" dateTime={contribution.timestamp}>
-                                  {new Intl.DateTimeFormat("en-US", {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  }).format(new Date(contribution.timestamp))}
-                                </time>
-                              </div>
-                              :
-                              <div key={contribution.id} className="bg-muted rounded-md p-2">
-                                <span className="text-md text-muted-foreground mb-2 font-semibold">Aggregated response</span>
-                                <MantineAccordion chevronPosition="left" className="mt-2">
-                                  <MantineAccordion.Item key={"aggregation"} value={"aggregation"} className="border rounded-lg overflow-hidden">
-                                    <MantineAccordion.Control><p className="text-sm">Aggregated response</p></MantineAccordion.Control>
-                                    <MantineAccordion.Panel>{contribution.message}</MantineAccordion.Panel>
-                                  </MantineAccordion.Item>
-                                </MantineAccordion>
-                                <time className="text-xs text-muted-foreground mb-2" dateTime={contribution.timestamp}>
-                                  {new Intl.DateTimeFormat("en-US", {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  }).format(new Date(contribution.timestamp))}
-                                </time>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="text-sm text-muted-foreground">
-                              No contributions yet
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button
+                        className="bg-[#e61f57] hover:bg-[#e61f57]/90"
+                        onClick={handleAddAgent}
+                      >
+                        Add Agent
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <Accordion
+                  type="multiple"
+                  value={expandedAgents}
+                  className="space-y-4"
+                >
+                  {agents.map((agent) => (
+                    <AccordionItem
+                      key={agent.id}
+                      value={`agent-${agent.id}`}
+                      className="border rounded-lg overflow-hidden"
+                    >
+                      <div className="flex items-center p-3">
+                        <Avatar className="mr-3">
+                          {/* <AvatarImage src={agent.icon} alt={agent.name} /> */}
+                          <AvatarFallback>
+                            <b>{agent.model_id.substring(0, 2)}</b>
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="font-medium">{agent.model_id}</div>
+                          <div className="text-sm text-muted-foreground truncate">
+                            {agent.address.slice(0, 7)}...
+                            {agent.address.slice(-7)}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end mr-2">
+                          <Badge
+                            variant={
+                              agent.status === "active"
+                                ? "default"
+                                : "secondary"
+                            }
+                            className={`mb-1 ${
+                              agent.status === "active"
+                                ? "bg-[#e61f57] hover:bg-[#e61f57]/90"
+                                : ""
+                            }`}
+                          >
+                            {agent.status}
+                          </Badge>
+                          {agent.shapleyValue && (
+                            <div className="text-md font-medium">
+                              Shapley:{" "}
+                              <span className="text-[#e61f57]">
+                                {agent.shapleyValue.toFixed(4)}
+                              </span>
                             </div>
                           )}
                         </div>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </CardContent>
- 
-            <div className="w-4/5 mx-auto flex flex-col items-left">
-              {agents.map((agent, index) => (
-                agent.shapleyValue && (
-                  <div key={index}>
-                  <span className="text-md font-medium mb-2">Shapley {index + 1} (reward)</span>
-                  <Progress.Root key={agent.id} size="xl" radius="md" className='mb-4'>
-                    <Progress.Section value={agent.shapleyValue * 120} color="#e61f57">
-                      <Progress.Label>{agent.shapleyValue.toFixed(4)}</Progress.Label>
-                    </Progress.Section>
-                  </Progress.Root>
-                  </div>
-                )
-              ))}
-            </div>
-          </Card>
-        </div>
-        <div className="lg:col-span-7">
-          <Card className="h-[calc(100vh-150px)] flex flex-col">
-            <CardHeader>
-              <CardTitle>Consensus Learning Chat</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto">
-              <div className="space-y-4">
-                {messages.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">
-                    Start a conversation with the consensus learning system
-                  </div>
-                ) : (
-                  messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${
-                        message.type === "user"
-                          ? "justify-end"
-                          : "justify-start"
-                      }`}
-                    >
-                      <div
-                        className={`flex gap-3 max-w-[80%] ${
-                          message.type === "user" ? "flex-row-reverse" : ""
-                        }`}
-                      >
-                        <Avatar className="h-8 w-8">
-                          {message.type === "user" ? (
-                            <>
-                              {/* <AvatarImage src="/placeholder.svg?height=32&width=32" alt="User" /> */}
-                              <AvatarFallback>
-                                <b>U</b>
-                              </AvatarFallback>
-                            </>
-                          ) : (
-                            <>
-                              {/* <AvatarImage src="/placeholder.svg?height=32&width=32" alt="System" /> */}
-                              <AvatarFallback>
-                                <b>S</b>
-                              </AvatarFallback>
-                            </>
-                          )}
-                        </Avatar>
-                        <div
-                          className={`rounded-lg p-3 ${
-                            message.type === "user"
-                              ? "bg-[#e61f57] text-white"
-                              : "bg-muted"
-                          }`}
+                        <AccordionTrigger
+                          onClick={() => toggleAgent(`agent-${agent.id}`)}
+                          className="p-0 hover:no-underline"
                         >
-                          <ReactMarkdown
-                            components={MarkdownComponents}
-                            className="text-md break-words whitespace-pre-wrap"
-                          >
-                            {message.text}
-                          </ReactMarkdown>
-                          {/* ============ CONFIRM TRANSACTION ============= */}
-                          {message.type === "bot" &&
-                            message.text.includes("Transaction Preview:") && (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  className="mt-2"
-                                  onClick={() => handleConfirmTransaction()}
-                                  disabled={!awaitingConfirmation}
-                                >
-                                  ✅ Confirm transaction
-                                </Button>
-                                <br />
-                              </>
-                            )}
-                          {/* {message.text} */}
-                          {message.timeElapsed && (
-                            <span className="text-gray-500 inline">
-                              Time elapsed:{" "}
-                              {Number(message.timeElapsed).toFixed(2)}s{" "}
-                            </span>
-                          )}
-                          {message.confidence && (
-                            <span className="text-gray-500 inline">
-                              | Consensus confidence:{" "}
-                              {Number(message.confidence).toFixed(2)}
-                            </span>
-                          )}
-                          {/* ============ CREATE ACCOUNT ============= */}
-                          {message.text.includes("Account created with") &&
-                            awaitingCreateAccount && (
-                              <div>
-                                <Button
-                                  variant="outline"
-                                  className="mt-2"
-                                  disabled={isLoadingCreateAccount}
-                                  onClick={() => {
-                                    sendCreateAccountTransaction();
-                                  }}
-                                >
-                                  ✅ Create and fund account
-                                </Button>
-                                <br />
+                          <span className="sr-only">Toggle</span>
+                        </AccordionTrigger>
+                      </div>
+                      <AccordionContent className="pt-0">
+                        <div className="border-t p-3">
+                          <h4 className="text-sm font-semibold mb-2">
+                            Contributions
+                          </h4>
+                          <div className="space-y-3">
+                            {agent.contributions.length > 0 ? (
+                              agent.contributions.map((contribution) =>
+                                contribution.type === "iteration" ? (
+                                  <div
+                                    key={contribution.id}
+                                    className="bg-muted rounded-md p-2"
+                                  >
+                                    <span className="text-md text-muted-foreground mb-2 font-semibold">
+                                      Iteration {contribution.iteration}
+                                    </span>
+                                    <p className="text-sm mb-1 mt-1">
+                                      {" "}
+                                      {contribution.message}
+                                    </p>
+                                    <time
+                                      className="text-xs text-muted-foreground mb-2"
+                                      dateTime={contribution.timestamp}
+                                    >
+                                      {new Intl.DateTimeFormat("en-US", {
+                                        year: "numeric",
+                                        month: "short",
+                                        day: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      }).format(
+                                        new Date(contribution.timestamp)
+                                      )}
+                                    </time>
+                                  </div>
+                                ) : (
+                                  <div
+                                    key={contribution.id}
+                                    className="bg-muted rounded-md p-2"
+                                  >
+                                    <span className="text-md text-muted-foreground mb-2 font-semibold">
+                                      Aggregated response
+                                    </span>
+                                    <MantineAccordion
+                                      chevronPosition="left"
+                                      className="mt-2"
+                                    >
+                                      <MantineAccordion.Item
+                                        key={"aggregation"}
+                                        value={"aggregation"}
+                                        className="border rounded-lg overflow-hidden"
+                                      >
+                                        <MantineAccordion.Control>
+                                          <p className="text-sm">
+                                            Aggregated response
+                                          </p>
+                                        </MantineAccordion.Control>
+                                        <MantineAccordion.Panel>
+                                          {contribution.message}
+                                        </MantineAccordion.Panel>
+                                      </MantineAccordion.Item>
+                                    </MantineAccordion>
+                                    <time
+                                      className="text-xs text-muted-foreground mb-2"
+                                      dateTime={contribution.timestamp}
+                                    >
+                                      {new Intl.DateTimeFormat("en-US", {
+                                        year: "numeric",
+                                        month: "short",
+                                        day: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      }).format(
+                                        new Date(contribution.timestamp)
+                                      )}
+                                    </time>
+                                  </div>
+                                )
+                              )
+                            ) : (
+                              <div className="text-sm text-muted-foreground">
+                                No contributions yet
                               </div>
                             )}
-                          {message.text.includes("Account created with") &&
-                            awaitingCreateAccount && (
-                              <>
-                                {isLoadingCreateAccount && <LoadingSpinner />}
-                              </>
-                            )}
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </CardContent>
 
-                          {/* ============ END CREATE ACCOUNT ============= */}
-                        </div>
+              <div className="w-4/5 mx-auto flex flex-col items-left">
+                {agents.map(
+                  (agent, index) =>
+                    agent.shapleyValue && (
+                      <div key={index}>
+                        <span className="text-md font-medium mb-2">
+                          Shapley {index + 1} (reward)
+                        </span>
+                        <Progress.Root
+                          key={agent.id}
+                          size="xl"
+                          radius="md"
+                          className="mb-4"
+                        >
+                          <Progress.Section
+                            value={agent.shapleyValue * 120}
+                            color="#e61f57"
+                          >
+                            <Progress.Label>
+                              {agent.shapleyValue.toFixed(4)}
+                            </Progress.Label>
+                          </Progress.Section>
+                        </Progress.Root>
                       </div>
-                    </div>
-                  ))
-                )}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="flex gap-3 max-w-[80%]">
-                      <Avatar className="h-8 w-8">
-                        {/* <AvatarImage src="/placeholder.svg?height=32&width=32" alt="System" /> */}
-                        <AvatarFallback>
-                          <b>S</b>
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="rounded-lg p-3 bg-muted">
-                        <div className="flex space-x-2">
-                          <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce"></div>
-                          <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce delay-75"></div>
-                          <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce delay-150"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                    )
                 )}
               </div>
-            </CardContent>
-            <CardFooter>
-              <form onSubmit={handleSubmit} className="flex w-full gap-2">
-                <Input
-                  placeholder="Ask about consensus learning..."
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  className="flex-1"
-                />
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="bg-[#e61f57] hover:bg-[#e61f57]/90"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </form>
-            </CardFooter>
-          </Card>
+            </Card>
+          </div>
+          <div className="lg:col-span-7">
+            <Card className="h-[calc(100vh-150px)] flex flex-col">
+              <CardHeader>
+                <CardTitle>Consensus Learning Chat</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-y-auto">
+                <div className="space-y-4">
+                  {messages.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">
+                      Start a conversation with the consensus learning system
+                    </div>
+                  ) : (
+                    messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex ${
+                          message.type === "user"
+                            ? "justify-end"
+                            : "justify-start"
+                        }`}
+                      >
+                        <div
+                          className={`flex gap-3 max-w-[80%] ${
+                            message.type === "user" ? "flex-row-reverse" : ""
+                          }`}
+                        >
+                          <Avatar className="h-8 w-8">
+                            {message.type === "user" ? (
+                              <>
+                                {/* <AvatarImage src="/placeholder.svg?height=32&width=32" alt="User" /> */}
+                                <AvatarFallback>
+                                  <b>U</b>
+                                </AvatarFallback>
+                              </>
+                            ) : (
+                              <>
+                                {/* <AvatarImage src="/placeholder.svg?height=32&width=32" alt="System" /> */}
+                                <AvatarFallback>
+                                  <b>S</b>
+                                </AvatarFallback>
+                              </>
+                            )}
+                          </Avatar>
+                          <div
+                            className={`rounded-lg p-3 ${
+                              message.type === "user"
+                                ? "bg-[#e61f57] text-white"
+                                : "bg-muted"
+                            }`}
+                          >
+                            <ReactMarkdown
+                              components={MarkdownComponents}
+                              className="text-md break-words whitespace-pre-wrap"
+                            >
+                              {message.text}
+                            </ReactMarkdown>
+                            {/* ============ CONFIRM TRANSACTION ============= */}
+                            {message.type === "bot" &&
+                              message.text.includes("Transaction Preview:") && (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    className="mt-2"
+                                    onClick={() => handleConfirmTransaction()}
+                                    disabled={!awaitingConfirmation}
+                                  >
+                                    ✅ Confirm transaction
+                                  </Button>
+                                  <br />
+                                </>
+                              )}
+                            {/* {message.text} */}
+                            {message.timeElapsed && (
+                              <span className="text-gray-500 inline">
+                                Time elapsed:{" "}
+                                {Number(message.timeElapsed).toFixed(2)}s{" "}
+                              </span>
+                            )}
+                            {message.confidence && (
+                              <span className="text-gray-500 inline">
+                                | Consensus confidence:{" "}
+                                {Number(message.confidence).toFixed(2)}
+                              </span>
+                            )}
+                            {/* ============ CREATE ACCOUNT ============= */}
+                            {message.text.includes("Account created with") &&
+                              awaitingCreateAccount && (
+                                <div>
+                                  <Button
+                                    variant="outline"
+                                    className="mt-2"
+                                    disabled={isLoadingCreateAccount}
+                                    onClick={() => {
+                                      sendCreateAccountTransaction();
+                                    }}
+                                  >
+                                    ✅ Create and fund account
+                                  </Button>
+                                  <br />
+                                </div>
+                              )}
+                            {message.text.includes("Account created with") &&
+                              awaitingCreateAccount && (
+                                <>
+                                  {isLoadingCreateAccount && <LoadingSpinner />}
+                                </>
+                              )}
+
+                            {/* ============ END CREATE ACCOUNT ============= */}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  {isLoading && (
+                    <div className="flex justify-start">
+                      <div className="flex gap-3 max-w-[80%]">
+                        <Avatar className="h-8 w-8">
+                          {/* <AvatarImage src="/placeholder.svg?height=32&width=32" alt="System" /> */}
+                          <AvatarFallback>
+                            <b>S</b>
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="rounded-lg p-3 bg-muted">
+                          <div className="flex space-x-2">
+                            <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce"></div>
+                            <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce delay-75"></div>
+                            <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce delay-150"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter>
+                <form onSubmit={handleSubmit} className="flex w-full gap-2">
+                  <Input
+                    placeholder="Ask about consensus learning..."
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="bg-[#e61f57] hover:bg-[#e61f57]/90"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </form>
+              </CardFooter>
+            </Card>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
     </MantineProvider>
-  )
+  );
 }
