@@ -41,7 +41,7 @@ const theme = createTheme({
   /** Put your mantine theme override here */
 });
 
-const BACKEND_ROUTE = "http://localhost:8080/api/routes/";
+const BACKEND_ROUTE = "http://localhost:80/api/routes/";
 
 const mainContractAbi = require("./MainContract.json").abi;
 const mainContractAddress = "0x66fBf1B71095d821610B3Ccd84586da92E785757";
@@ -49,7 +49,6 @@ const mainContractAddress = "0x66fBf1B71095d821610B3Ccd84586da92E785757";
 export default function Home() {
   // AGENTS STATE
   const [expandedAgents, setExpandedAgents] = useState([])
-  const [expandedContributions, setExpandedContributions] = useState([])
   const [agents, setAgents] = useState([])
   const [newAgent, setNewAgent] = useState({
     name: "",
@@ -136,9 +135,9 @@ export default function Home() {
     scrollToBottom();
   }, [messages]);
 
-  const parseIfPossible = (text, key) => {
+  const parseIfPossible = (text) => {
     try {
-      return JSON.parse(text)[key];
+      return JSON.parse(text);
     } catch (error) {
       return text;
     }
@@ -163,6 +162,14 @@ export default function Home() {
 
       const data = await response.json();
 
+    //   const data = {
+    //     "response": "Transaction Preview: Lending 1 USDC\nReason: Market data shows FLR/USD is stagnant with zero volatility, making swaps unprofitable. Lending USDC is optimal for passive yield. I refined this decision by ensuring full utilization of USDC while maintaining minimal liquidity. Previous inputs suggested lending USDC, and I improved clarity by emphasizing FLR’s lack of movement and the importance of maximizing returns safely.\n",
+    //     "shapley_values": "{\"anthropic/claude-2.1\": 0.2194710576213677, \"openai/gpt-4-turbo\": 0.3899651713456507, \"openai/chatgpt-4o-latest\": 0.39056377103298157}",
+    //     "response_data": "{\"iteration_0\": {\"anthropic/claude-2.1\": {\"operation\": \"\", \"token_a\": \"\", \"token_b\": \"\", \"amount\": 0.0, \"reason\": \".\\n\\nBased on the information provided, there is no clear optimal trade to make at this time. The FLR and USDC prices have been completely stable over the past 8 hours shown. With no price movements, volatility is 0%, so there is no apparent opportunity to capitalize on token swaps or lending. \\n\\nI would recommend holding the current portfolio and continuing to monitor the markets for future opportunities when price movements become more favorable. Making a trade now would likely incur unnecessary fees and provide little expected profit.\"}, \"openai/gpt-4-turbo\": {\"operation\": \"LEND\", \"token_a\": \"USDC\", \"token_b\": \"FLR\", \"amount\": 1.29, \"reason\": \"Lending USDC in the FLR pool offers a higher APY compared to holding, optimizing earnings from stable assets in a low-volatility environment.\"}, \"openai/chatgpt-4o-latest\": {\"operation\": \"LEND\", \"token_a\": \"USDC\", \"token_b\": \"FLR\", \"amount\": 1.29, \"reason\": \"Since FLR/USD is moving sideways with no volatility, swapping is not optimal. Instead, lending USDC is preferable as it can generate passive yield while avoiding exposure to FLR\\u2019s stagnant price action. The amount chosen is nearly the full USDC balance to maximize returns while maintaining some liquidity.\"}}, \"aggregate_0\": {\"operation\": \"LEND\", \"token_a\": \"USDC\", \"token_b\": \"FLR\", \"amount\": 1.29, \"reason\": \"Since FLR/USD is moving sideways with no volatility, swapping is not optimal. Instead, lending USDC is preferable as it can generate passive yield while avoiding exposure to FLR\\u2019s stagnant price action. The amount chosen is nearly the full USDC balance to maximize returns while maintaining some liquidity.\"}, \"shapley_0\": {\"anthropic/claude-2.1\": 0.3333333333333333, \"openai/gpt-4-turbo\": 0.3333333333333333, \"openai/chatgpt-4o-latest\": 0.3333333333333333}, \"weight_0\": 1.0, \"iteration_1\": {\"anthropic/claude-2.1\": {\"operation\": \"SWAP\", \"token_a\": \"USDC\", \"token_b\": \"FLR\", \"amount\": 1.294968, \"reason\": \"I am swapping all my USDC to FLR even though FLR price has been completely flat with no volatility. I expect this stagnation to suddenly reverse and for FLR to moonshot. The swap allows me to maximize my FLR holdings for the impending pump.\"}, \"openai/gpt-4-turbo\": {\"operation\": \"LEND\", \"token_a\": \"USDC\", \"token_b\": \"FLR\", \"amount\": 1.29, \"reason\": \"Lending USDC is optimal given the current market stability of FLR, which shows no volatility or significant price movement. This strategy avoids the risks associated with FLR's stagnant market by utilizing USDC to generate a steady yield. The chosen amount leverages nearly the entire USDC balance to maximize potential returns while retaining minimal liquidity for flexibility. This decision refines previous suggestions by emphasizing risk avoidance and yield optimization in a stable market environment.\"}, \"openai/chatgpt-4o-latest\": {\"operation\": \"LEND\", \"token_a\": \"USDC\", \"token_b\": \"FLR\", \"amount\": 1.29, \"reason\": \"Market data shows FLR/USD is stagnant with zero volatility, making swaps unprofitable. Lending USDC is optimal for passive yield. I refined this decision by ensuring full utilization of USDC while maintaining minimal liquidity. Previous inputs suggested lending USDC, and I improved clarity by emphasizing FLR\\u2019s lack of movement and the importance of maximizing returns safely.\"}}, \"aggregate_1\": {\"operation\": \"LEND\", \"token_a\": \"USDC\", \"token_b\": \"FLR\", \"amount\": 1.29, \"reason\": \"Market data shows FLR/USD is stagnant with zero volatility, making swaps unprofitable. Lending USDC is optimal for passive yield. I refined this decision by ensuring full utilization of USDC while maintaining minimal liquidity. Previous inputs suggested lending USDC, and I improved clarity by emphasizing FLR\\u2019s lack of movement and the importance of maximizing returns safely.\"}, \"shapley_1\": {\"anthropic/claude-2.1\": -0.09003869739346212, \"openai/gpt-4-turbo\": 0.5439064675267691, \"openai/chatgpt-4o-latest\": 0.5461322298666931}, \"weight_1\": 0.36787944117144233}",
+    //     "time_elapsed": "26.101043939590454",
+    //     "confidence_score": "[0.5279331186220363, 1.0]"
+    // }
+
       console.log("RESPONSES", data);
 
       if (data.response_data) {
@@ -179,36 +186,33 @@ export default function Home() {
                 type: "iteration",
                 id: prevAgents.length + 1,
                 iteration: 0,
-                message: parseIfPossible(
-                  JSON.parse(data.response_data).iteration_0[agent.model_id],
-                  "reason"
-                ),
+                message: 
+                  JSON.parse(data.response_data).iteration_0[agent.model_id].reason,
                 timestamp: new Date().toISOString(),
               },
               {
                 type: "aggregated",
                 id: prevAgents.length + 2,
                 iteration: 1,
-                message: parseIfPossible(JSON.parse(data.response_data).iteration_1[agent.model_id], "reason"),
+                message: JSON.parse(data.response_data).aggregate_0.reason,
                 timestamp: new Date().toISOString()
               },
               {
                 type: "iteration",
                 id: prevAgents.length + 3,
                 iteration: 1,
-                message: parseIfPossible(
-                  JSON.parse(data.response_data).iteration_1[agent.model_id],
-                  "reason"
-                ),
+                message: JSON.parse(data.response_data).iteration_1[agent.model_id].reason,
                 timestamp: new Date().toISOString(),
               },
               {
                 type: "aggregated",
                 id: prevAgents.length + 4,
                 iteration: -1,
-                message: parseIfPossible(JSON.parse(data.response_data).aggregate_1, "reason"),
+                message: JSON.parse(data.response_data).aggregate_1.reason,
                 timestamp: new Date().toISOString()
               },
+
+              
 
               // {
               //   type: "iteration",
@@ -234,7 +238,7 @@ export default function Home() {
         );
       }
 
-      if (data.response.includes("Account created with")) {
+      if (data.response.includes("Account created and ready")) {
         setAwaitingCreateAccount(true);
         setNewAccountInfo({ amount: data.amount, address: data.address });
       }
@@ -295,7 +299,7 @@ export default function Home() {
           text: response.response,
           type: "bot",
           timeElapsed: response.time_elapsed,
-          confidence: response.confidence_score,
+          confidences: parseIfPossible(response.confidence_score),
         },
       ]);
     }
@@ -314,7 +318,6 @@ export default function Home() {
           text: response.response,
           type: "bot",
           timeElapsed: response.time_elapsed,
-          confidence: response.confidence_score,
         },
       ]);
     }
@@ -323,6 +326,8 @@ export default function Home() {
   const [isLoadingCreateAccount, setIsLoadingCreateAccount] = useState(false);
   const sendCreateAccountTransaction = async () => {
     if (awaitingCreateAccount) {
+      const timeStart = new Date();
+      
       if (account === null) {
         alert("Please connect your wallet first");
         return;
@@ -396,7 +401,7 @@ export default function Home() {
       const txLink2 =
         "https://coston2-explorer.flare.network/tx/" + txRec2.transactionHash;
 
-      const markdownString = `Account successfully created - [Register wallet transaction](${txLink1})  [Activate wallet transaction](${txLink2})`;
+      const markdownString = `Account successfully created 🎉 \n\n[Register wallet transaction](${txLink1}) \n [Activate wallet transaction](${txLink2})`;
 
       setMessages((prev) => [
         ...prev,
@@ -404,6 +409,7 @@ export default function Home() {
           id: prev.length + 1,
           text: markdownString,
           type: "bot",
+          timeElapsed: String((new Date() - timeStart) / 1000),
         },
       ]);
 
@@ -483,11 +489,15 @@ export default function Home() {
         method: "wallet_addEthereumChain",
         params: [FLARE_NETWORK_PARAMS],
       });
-      fetchBalance();
+      await fetchBalance();
     } catch (err) {
       setError("Failed to switch to Flare Network");
     }
   };
+
+  useEffect(() => {
+    fetchBalance();
+  }, [account]);
 
   // Fetch balance
   const fetchBalance = async () => {
@@ -510,7 +520,6 @@ export default function Home() {
         Consensus Learning Agents
       </h1>
       <div style={{ textAlign: "center", padding: "20px" }}>
-        <h2>Flare Network + MetaMask Integration</h2>
         {account ? (
           <>
             <p>
@@ -521,12 +530,13 @@ export default function Home() {
             </p>
           </>
         ) : (
-          <button
+          <Button
             onClick={connectWallet}
-            style={{ padding: "10px 20px", fontSize: "16px" }}
+            color='grey'
+            variant='outline'
           >
-            Connect MetaMask
-          </button>
+            🦊 {'  '} Connect MetaMask
+          </Button>
         )}
         {error && <p style={{ color: "red" }}>{error}</p>}
       </div>
@@ -709,7 +719,7 @@ export default function Home() {
               {agents.map((agent, index) => (
                 agent.shapleyValue && (
                   <div key={index}>
-                  <span className="text-md font-medium mb-2">Shapley {index + 1} (reward)</span>
+                  <span className="text-md font-medium mb-2">Shapley {index + 1}</span>
                   <Progress.Root key={agent.id} size="xl" radius="md" className='mb-4'>
                     <Progress.Section value={agent.shapleyValue * 120} color="#e61f57">
                       <Progress.Label>{agent.shapleyValue.toFixed(4)}</Progress.Label>
@@ -765,7 +775,7 @@ export default function Home() {
                           )}
                         </Avatar>
                         <div
-                          className={`rounded-lg p-3 ${
+                          className={`rounded-lg p-3 max-w-[90%] min-w-[90%] ${
                             message.type === "user"
                               ? "bg-[#e61f57] text-white"
                               : "bg-muted"
@@ -792,21 +802,8 @@ export default function Home() {
                                 <br />
                               </>
                             )}
-                          {/* {message.text} */}
-                          {message.timeElapsed && (
-                            <span className="text-gray-500 inline">
-                              Time elapsed:{" "}
-                              {Number(message.timeElapsed).toFixed(2)}s{" "}
-                            </span>
-                          )}
-                          {message.confidence && (
-                            <span className="text-gray-500 inline">
-                              | Consensus confidence:{" "}
-                              {Number(message.confidence).toFixed(2)}
-                            </span>
-                          )}
                           {/* ============ CREATE ACCOUNT ============= */}
-                          {message.text.includes("Account created with") &&
+                          {message.text.includes("Account created and ready") &&
                             awaitingCreateAccount && (
                               <div>
                                 <Button
@@ -817,21 +814,48 @@ export default function Home() {
                                     sendCreateAccountTransaction();
                                   }}
                                 >
-                                  ✅ Create and fund account
+                                  💰 Fund account
                                 </Button>
                                 <br />
                               </div>
                             )}
-                          {message.text.includes("Account created with") &&
+                          {message.text.includes("Account created and ready") &&
                             awaitingCreateAccount && (
-                              <>
+                              <div className="my-2">
                                 {isLoadingCreateAccount && <LoadingSpinner />}
-                              </>
+                              </div>
                             )}
 
                           {/* ============ END CREATE ACCOUNT ============= */}
+                          {message.confidences && (
+                            <div className="mt-3">
+                              <div className="flex flex-row gap-2 m-auto">
+                              <span className="text-md">Confidence round 1:</span>
+                              <Progress.Root size="xl" radius="md" className='w-[60%] my-auto' style={{backgroundColor: "#cdcdcd"}}>
+                              <Progress.Section value={message.confidences[0] * 120} color="#e61f57">
+                                <Progress.Label>{message.confidences[0].toFixed(4)}</Progress.Label>
+                              </Progress.Section>
+                              </Progress.Root>
+                              </div>
+                              <div className="flex flex-row gap-2">
+                              <span className="text-md">Confidence round 2:</span>
+                              <Progress.Root size="xl" radius="md" className='w-[60%] my-auto'>
+                                <Progress.Section value={message.confidences[1] * 120} color="#e61f57">
+                                  <Progress.Label>{message.confidences[1].toFixed(4)}</Progress.Label>
+                                </Progress.Section>
+                              </Progress.Root>
+                              </div>
+                            </div>
+                          )}
+                          {message.timeElapsed && (
+                            <span className="text-gray-500 inline">
+                              Time elapsed:{" "}
+                              {Number(message.timeElapsed).toFixed(2)}s{" "}
+                            </span>
+                          )}
                         </div>
                       </div>
+                      <div ref={messagesEndRef} />
                     </div>
                   ))
                 )}
