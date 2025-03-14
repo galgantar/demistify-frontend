@@ -218,10 +218,7 @@ export default function Home() {
                 type: "aggregated",
                 id: prevAgents.length + 4,
                 iteration: -1,
-                message: parseIfPossible(
-                  JSON.parse(data.response_data).aggregate_1,
-                  "reason"
-                ),
+                message: JSON.parse(data.response_data).aggregate_1.reason,
                 timestamp: new Date().toISOString(),
               },
 
