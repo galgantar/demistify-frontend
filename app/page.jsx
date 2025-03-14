@@ -30,7 +30,7 @@ import { Send } from "lucide-react"
 import { useEffect, useRef } from "react"
 import ReactMarkdown from "react-markdown";
 import { Progress } from '@mantine/core';
-import { Accordion as MantineAccordion } from '@mantine/core';
+import { Accordion as MantineAccordion, Text as MantineText } from '@mantine/core';
 
 import { ethers } from "ethers";
 import LoadingSpinner from "./components/LoadingSpinner";
@@ -107,7 +107,7 @@ export default function Home() {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hi, I'm Artemis! 👋 I'm your Copilot for Flare, ready to help you with operations like generating wallets, sending tokens, and executing token swaps. \n\n⚠️ While I aim to be accurate, never risk funds you can't afford to lose.",
+      text: "Hi, I'm DemistiFI! 👋 I'm an AI agent that powered by a consensus learning algorithm and running inside a Trusted Execution Environment. On you behalf I can execute blockchain transactions, and help you with your Flare operations.",
       type: "bot",
       timeElapsed: "0.0",
     },
@@ -516,29 +516,35 @@ export default function Home() {
   return (
     <MantineProvider theme={theme}>
     <main className="container mx-auto p-4 min-h-screen flex flex-col">
-      <h1 className="text-3xl font-bold mb-6 text-center">
-        Consensus Learning Agents
-      </h1>
-      <div style={{ textAlign: "center", padding: "20px" }}>
-        {account ? (
-          <>
-            <p>
-              <strong>Connected Address:</strong> {account}
-            </p>
-            <p>
-              <strong>Balance:</strong> {balance ?? "Loading..."}
-            </p>
-          </>
-        ) : (
-          <Button
-            onClick={connectWallet}
-            color='grey'
-            variant='outline'
-          >
-            🦊 {'  '} Connect MetaMask
-          </Button>
-        )}
-        {error && <p style={{ color: "red" }}>{error}</p>}
+      <div className='flex flex-row gap-4 justify-between items-center'>
+      <MantineText
+          style={{fontSize: "40px", fontWeight: 900, fontFamily: "satoshi"}}
+          variant="gradient"
+          gradient={{ from: '#862f4c', to: '#e61f57', deg: 90 }}
+        >
+          DemistiFI
+        </MantineText>
+        <div style={{ textAlign: "center", padding: "20px"}}>
+          {account ? (
+            <div className='flex flex-col items-start'>
+              <p>
+                <strong>Address:</strong> {account ? `${account.slice(0, 5)}...${account.slice(-5)}` : "N/A"}
+              </p>
+              <p>
+                <strong>Balance:</strong> {balance ?? "Loading..."}
+              </p>
+            </div>
+          ) : (
+            <Button
+              onClick={connectWallet}
+              color='grey'
+              variant='outline'
+            >
+              🦊 {'  '} Connect MetaMask
+            </Button>
+          )}
+          {error && <p style={{ color: "red" }}>{error}</p>}
+        </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
         <div className="lg:col-span-5">
@@ -898,6 +904,11 @@ export default function Home() {
               </form>
             </CardFooter>
           </Card>
+          <div className="flex flex-row gap-4 justify-end mt-3 align-center">
+            <p className='text-l' style={{lineHeight: "30px"}}>Powered by:</p>
+            <img src="/flare-flr-logo.png" alt="Flare FLR Logo" className="h-8" />
+            <img src="/GCP-logo.png" alt="GCP logo" className="h-8" />
+          </div>
         </div>
       </div>
     </main>
