@@ -31,9 +31,6 @@ import { useEffect, useRef } from "react"
 import ReactMarkdown from "react-markdown";
 import { Progress } from '@mantine/core';
 import { Accordion as MantineAccordion } from '@mantine/core';
-import { CardFooter } from "@/components/ui/card";
-import { Send } from "lucide-react";
-import { useEffect, useRef } from "react";
 
 import { ethers } from "ethers";
 import LoadingSpinner from "./components/LoadingSpinner";
