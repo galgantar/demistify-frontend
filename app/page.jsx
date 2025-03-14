@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import '@mantine/core/styles.css';
+import "@mantine/core/styles.css";
 import { useState, useId } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,9 +25,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle } from "lucide-react";
 
-import { CardFooter } from "@/components/ui/card"
-import { Send } from "lucide-react"
-import { useEffect, useRef } from "react"
+import { CardFooter } from "@/components/ui/card";
+import { Send } from "lucide-react";
+import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { Progress } from '@mantine/core';
 import { Accordion as MantineAccordion, Text as MantineText } from '@mantine/core';
@@ -35,16 +35,17 @@ import { Accordion as MantineAccordion, Text as MantineText } from '@mantine/cor
 import { ethers } from "ethers";
 import LoadingSpinner from "./components/LoadingSpinner";
 
-import { createTheme, MantineProvider } from '@mantine/core';
+import { createTheme, MantineProvider } from "@mantine/core";
 
 const theme = createTheme({
   /** Put your mantine theme override here */
 });
 
 const BACKEND_ROUTE = "http://localhost:80/api/routes/";
+// const BACKEND_ROUTE = "http://34.70.53.63:80/api/routes/";
 
 const mainContractAbi = require("./MainContract.json").abi;
-const mainContractAddress = "0x66fBf1B71095d821610B3Ccd84586da92E785757";
+const mainContractAddress = "0xe4438A002095Ffa8FC46C3fFfA1Aadcea1b04542";
 
 export default function Home() {
   // AGENTS STATE
@@ -129,6 +130,9 @@ export default function Home() {
   const [newAccountInfo, setNewAccountInfo] = useState({
     amount: 0,
     address: "",
+    header: "",
+    payload: "",
+    signature: "",
   });
 
   useEffect(() => {
@@ -208,7 +212,7 @@ export default function Home() {
                 type: "aggregated",
                 id: prevAgents.length + 4,
                 iteration: -1,
-                message: JSON.parse(data.response_data).aggregate_1.reason,
+                message: parseIfPossible(JSON.parse(data.response_data).aggregate_1, "reason"),
                 timestamp: new Date().toISOString()
               },
 
@@ -240,7 +244,13 @@ export default function Home() {
 
       if (data.response.includes("Account created and ready")) {
         setAwaitingCreateAccount(true);
-        setNewAccountInfo({ amount: data.amount, address: data.address });
+        setNewAccountInfo({
+          amount: data.amount,
+          address: data.address,
+          header: data.header,
+          payload: data.payload,
+          signature: data.signature,
+        });
       }
 
       // Check if response contains a transaction preview
@@ -334,7 +344,6 @@ export default function Home() {
       }
 
       setIsLoadingCreateAccount(true);
-      setNewAccountInfo({ amount: 0, address: "" });
 
       console.log(
         "SENDING CREATE ACCOUNT TRANSACTION: ",
@@ -381,9 +390,13 @@ export default function Home() {
 
       const AttestationToken = require("./mockToken.json");
 
-      const header = ethers.utils.arrayify(AttestationToken.Header);
-      const payload = ethers.utils.arrayify(AttestationToken.Payload);
-      const signature = ethers.utils.arrayify(AttestationToken.Signature);
+      const header = ethers.utils.arrayify(newAccountInfo.header);
+      const payload = ethers.utils.arrayify(newAccountInfo.payload);
+      const signature = ethers.utils.arrayify(newAccountInfo.signature);
+
+      console.log("HEADER: ", header);
+      console.log("PAYLOAD: ", payload);
+      console.log("SIGNATURE: ", signature);
 
       transaction = await contract.activateWallet(
         header,
@@ -413,6 +426,13 @@ export default function Home() {
         },
       ]);
 
+      setNewAccountInfo({
+        amount: 0,
+        address: "",
+        header: "",
+        payload: "",
+        signature: "",
+      });
       setAwaitingCreateAccount(false);
       setIsLoadingCreateAccount(false);
     }
@@ -913,5 +933,5 @@ export default function Home() {
       </div>
     </main>
     </MantineProvider>
-  )
+  );
 }
