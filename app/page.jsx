@@ -107,7 +107,7 @@ export default function Home() {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hi, I'm DemistiFI! 👋 I'm an AI agent that powered by a consensus learning algorithm and running inside a Trusted Execution Environment. On you behalf I can execute blockchain transactions, and help you with your Flare operations.",
+      text: "Hi there! I'm DemistiFI! 👋 Secured by a [Trusted Execution Environment](https://en.wikipedia.org/wiki/Trusted_execution_environment) and driven by a consensus learning algorithm, I work on your behalf to make things smoother. 💡 Need help with Flare transactions? I’ve got you covered on [Kinetic](https://kinetic.market) 🔄 and [Blaze Swap](https://www.blazeswap.io) 🔥!",
       type: "bot",
       timeElapsed: "0.0",
     },
