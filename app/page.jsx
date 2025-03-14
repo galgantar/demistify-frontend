@@ -1,9 +1,9 @@
-"use client";
+"use client"
 
+import '@mantine/core/styles.css';
 import { useState, useId } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import ReactMarkdown from "react-markdown";
 import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
@@ -25,12 +25,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle } from "lucide-react";
 
-import { CardFooter } from "@/components/ui/card";
-import { Send } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { CardFooter } from "@/components/ui/card"
+import { Send } from "lucide-react"
+import { useEffect, useRef } from "react"
+import ReactMarkdown from "react-markdown";
+import { Progress } from '@mantine/core';
+import { Accordion as MantineAccordion } from '@mantine/core';
 
 import { ethers } from "ethers";
 import LoadingSpinner from "./components/LoadingSpinner";
+
+import { createTheme, MantineProvider } from '@mantine/core';
+
+const theme = createTheme({
+  /** Put your mantine theme override here */
+});
 
 const BACKEND_ROUTE = "http://localhost:8080/api/routes/";
 
@@ -39,8 +48,9 @@ const mainContractAddress = "0x66fBf1B71095d821610B3Ccd84586da92E785757";
 
 export default function Home() {
   // AGENTS STATE
-  const [expandedAgents, setExpandedAgents] = useState([]);
-  const [agents, setAgents] = useState([]);
+  const [expandedAgents, setExpandedAgents] = useState([])
+  const [expandedContributions, setExpandedContributions] = useState([])
+  const [agents, setAgents] = useState([])
   const [newAgent, setNewAgent] = useState({
     name: "",
     address: "",
@@ -166,6 +176,7 @@ export default function Home() {
             contributions: [
               ...agent.contributions,
               {
+                type: "iteration",
                 id: prevAgents.length + 1,
                 iteration: 0,
                 message: parseIfPossible(
@@ -175,7 +186,15 @@ export default function Home() {
                 timestamp: new Date().toISOString(),
               },
               {
+                type: "aggregated",
                 id: prevAgents.length + 2,
+                iteration: 1,
+                message: parseIfPossible(JSON.parse(data.response_data).iteration_1[agent.model_id], "reason"),
+                timestamp: new Date().toISOString()
+              },
+              {
+                type: "iteration",
+                id: prevAgents.length + 3,
                 iteration: 1,
                 message: parseIfPossible(
                   JSON.parse(data.response_data).iteration_1[agent.model_id],
@@ -184,14 +203,27 @@ export default function Home() {
                 timestamp: new Date().toISOString(),
               },
               {
-                id: prevAgents.length + 3,
-                iteration: 2,
-                message: parseIfPossible(
-                  JSON.parse(data.response_data).iteration_2[agent.model_id],
-                  "reason"
-                ),
-                timestamp: new Date().toISOString(),
+                type: "aggregated",
+                id: prevAgents.length + 4,
+                iteration: -1,
+                message: parseIfPossible(JSON.parse(data.response_data).aggregate_1, "reason"),
+                timestamp: new Date().toISOString()
               },
+
+              // {
+              //   type: "iteration",
+              //   id: prevAgents.length + 5,
+              //   iteration: 2,
+              //   message: parseIfPossible(JSON.parse(data.response_data).iteration_2[agent.model_id], "reason"),
+              //   timestamp: new Date().toISOString()
+              // },
+              // {
+              //   type: "aggregated",
+              //   id: prevAgents.length + 6,
+              //   iteration: -1,
+              //   message: parseIfPossible(JSON.parse(data.response_data).aggregate_2, "reason"),
+              //   timestamp: new Date().toISOString()
+              // },
               // {
               //   id: prevAgents.length + 4,
               //   message: "ITERATION 3: (based on consensus) " + JSON.parse(data.response_data).iteration_3[agent.model_id],
@@ -472,6 +504,7 @@ export default function Home() {
   };
 
   return (
+    <MantineProvider theme={theme}>
     <main className="container mx-auto p-4 min-h-screen flex flex-col">
       <h1 className="text-3xl font-bold mb-6 text-center">
         Consensus Learning Agents
@@ -624,21 +657,31 @@ export default function Home() {
                         <div className="space-y-3">
                           {agent.contributions.length > 0 ? (
                             agent.contributions.map((contribution) => (
-                              <div
-                                key={contribution.id}
-                                className="bg-muted rounded-md p-2"
-                              >
-                                <span className="text-xs text-muted-foreground mb-2">
-                                  Iteration {contribution.iteration}
-                                </span>
-                                <p className="text-sm mb-1">
-                                  {" "}
-                                  {contribution.message}
-                                </p>
-                                <time
-                                  className="text-xs text-muted-foreground mb-2"
-                                  dateTime={contribution.timestamp}
-                                >
+                              
+                              contribution.type === "iteration" ? 
+                              <div key={contribution.id} className="bg-muted rounded-md p-2">
+                                <span className="text-md text-muted-foreground mb-2 font-semibold">Iteration {contribution.iteration}</span>
+                                <p className="text-sm mb-1 mt-1"> {contribution.message}</p>
+                                <time className="text-xs text-muted-foreground mb-2" dateTime={contribution.timestamp}>
+                                  {new Intl.DateTimeFormat("en-US", {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }).format(new Date(contribution.timestamp))}
+                                </time>
+                              </div>
+                              :
+                              <div key={contribution.id} className="bg-muted rounded-md p-2">
+                                <span className="text-md text-muted-foreground mb-2 font-semibold">Aggregated response</span>
+                                <MantineAccordion chevronPosition="left" className="mt-2">
+                                  <MantineAccordion.Item key={"aggregation"} value={"aggregation"} className="border rounded-lg overflow-hidden">
+                                    <MantineAccordion.Control><p className="text-sm">Aggregated response</p></MantineAccordion.Control>
+                                    <MantineAccordion.Panel>{contribution.message}</MantineAccordion.Panel>
+                                  </MantineAccordion.Item>
+                                </MantineAccordion>
+                                <time className="text-xs text-muted-foreground mb-2" dateTime={contribution.timestamp}>
                                   {new Intl.DateTimeFormat("en-US", {
                                     year: "numeric",
                                     month: "short",
@@ -661,6 +704,21 @@ export default function Home() {
                 ))}
               </Accordion>
             </CardContent>
+ 
+            <div className="w-4/5 mx-auto flex flex-col items-left">
+              {agents.map((agent, index) => (
+                agent.shapleyValue && (
+                  <div key={index}>
+                  <span className="text-md font-medium mb-2">Shapley {index + 1} (reward)</span>
+                  <Progress.Root key={agent.id} size="xl" radius="md" className='mb-4'>
+                    <Progress.Section value={agent.shapleyValue * 120} color="#e61f57">
+                      <Progress.Label>{agent.shapleyValue.toFixed(4)}</Progress.Label>
+                    </Progress.Section>
+                  </Progress.Root>
+                  </div>
+                )
+              ))}
+            </div>
           </Card>
         </div>
         <div className="lg:col-span-7">
@@ -819,5 +877,6 @@ export default function Home() {
         </div>
       </div>
     </main>
-  );
+    </MantineProvider>
+  )
 }
