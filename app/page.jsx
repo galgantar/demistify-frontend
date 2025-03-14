@@ -297,7 +297,6 @@ export default function Home() {
       }
 
       setIsLoadingCreateAccount(true);
-      setAwaitingCreateAccount(false);
       setNewAccountInfo({ amount: 0, address: "" });
 
       console.log(
@@ -341,11 +340,9 @@ export default function Home() {
       let transaction = await contract.registerWallet(amountInWei);
       let txRec1 = await transaction.wait();
 
-      console.log("TRANSACTION: ", txReceipt);
+      console.log("TRANSACTION: ", txRec1);
 
       const AttestationToken = require("./mockToken.json");
-
-      console.log("ATTESATION TOKEN: ", AttestationToken);
 
       const header = ethers.utils.arrayify(AttestationToken.Header);
       const payload = ethers.utils.arrayify(AttestationToken.Payload);
@@ -362,9 +359,9 @@ export default function Home() {
       );
       let txRec2 = await transaction.wait();
 
-      txLink1 =
+      const txLink1 =
         "https://coston2-explorer.flare.network/tx/" + txRec1.transactionHash;
-      txLink2 =
+      const txLink2 =
         "https://coston2-explorer.flare.network/tx/" + txRec2.transactionHash;
 
       const markdownString = `Account successfully created - [Register wallet transaction](${txLink1})  [Activate wallet transaction](${txLink2})`;
@@ -378,6 +375,7 @@ export default function Home() {
         },
       ]);
 
+      setAwaitingCreateAccount(false);
       setIsLoadingCreateAccount(false);
     }
   };
@@ -756,6 +754,7 @@ export default function Home() {
                                 <Button
                                   variant="outline"
                                   className="mt-2"
+                                  disabled={isLoadingCreateAccount}
                                   onClick={() => {
                                     sendCreateAccountTransaction();
                                   }}
@@ -768,7 +767,6 @@ export default function Home() {
                           {message.text.includes("Account created with") &&
                             awaitingCreateAccount && (
                               <>
-                                {isLoadingCreateAccount}
                                 {isLoadingCreateAccount && <LoadingSpinner />}
                               </>
                             )}
